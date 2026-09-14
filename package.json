@@ -1,0 +1,16 @@
+{
+  "name": "chaintrace-backend",
+  "version": "5.0.0",
+  "description": "ChainTrace AI blockchain investigation backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check-key": "node check_key.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
