@@ -3006,13 +3006,36 @@ function findVaspForAddress(
 ========================================================= */
 
 function buildVaspAttribution(
-    transactions
+    transactions,
+    rootWallet = ""
 ) {
 
     const counterparties =
         getUniqueCounterparties(
             transactions
         );
+
+    const addresses =
+        [];
+
+    if (
+        rootWallet &&
+        !counterparties.some(
+            address =>
+                sameWallet(
+                    address,
+                    rootWallet
+                )
+        )
+    ) {
+        addresses.push(
+            rootWallet
+        );
+    }
+
+    addresses.push(
+        ...counterparties
+    );
 
     const results =
         [];
@@ -3021,7 +3044,7 @@ function buildVaspAttribution(
         new Set();
 
     for (
-        const address of counterparties
+        const address of addresses
     ) {
 
         const matches =
@@ -4855,16 +4878,30 @@ app.post(
                     "USDT"
                 ).toUpperCase();
 
+            /*
+             * TIME-BASED DEPTH
+             * Depth 1 = last 1 day
+             * Depth 2 = last 2 days
+             * Depth 3 = last 3 days
+             * Depth 4 = last 4 days
+             * Depth 5 = last 7 days (days 5, 6 and 7 included)
+             * ALL     = complete indexed transaction history
+             */
+            const depthValue =
+                safeString(
+                    req.body?.depth
+                ).toLowerCase();
+
             const depth =
-                Math.min(
-                    Math.max(
-                        Number(
-                            req.body?.depth
-                        ) || 2,
-                        1
-                    ),
-                    5
-                );
+                depthValue === "all"
+                    ? "all"
+                    : Math.min(
+                        Math.max(
+                            Number(depthValue) || 2,
+                            1
+                        ),
+                        5
+                    );
 
             if (!wallet) {
 
@@ -4956,10 +4993,60 @@ app.post(
                             )
                     );
 
-            const transactions =
+            const allTransactions =
                 sortTransactions(
                     normalized
                 );
+
+            /*
+             * Depth is a transaction-age window, not a hop count.
+             * Depth 1..4 = last N days.
+             * Depth 5 = complete 7-day window.
+             * ALL = everything returned by the configured indexer.
+             */
+            const transactions =
+                depth === "all"
+                    ? allTransactions
+                    : allTransactions.filter(
+                        tx => {
+                            const rawTimestamp =
+                                Number(
+                                    tx.timestamp
+                                );
+
+                            if (
+                                !Number.isFinite(
+                                    rawTimestamp
+                                )
+                            ) {
+                                return false;
+                            }
+
+                            const timestampMs =
+                                rawTimestamp <
+                                    100000000000
+                                    ? rawTimestamp * 1000
+                                    : rawTimestamp;
+
+                            const ageDays =
+                                Math.max(
+                                    0,
+                                    Date.now() -
+                                        timestampMs
+                                ) /
+                                (24 * 60 * 60 * 1000);
+
+                            const maxDays =
+                                depth === 5
+                                    ? 7
+                                    : Number(depth);
+
+                            return (
+                                ageDays <
+                                maxDays
+                            );
+                        }
+                    );
 
             const summary =
                 summarizeTransactions(
@@ -4985,8 +5072,56 @@ app.post(
 
             const vaspMatches =
                 buildVaspAttribution(
-                    transactions
+                    transactions,
+                    wallet
                 );
+
+            const primaryVaspMatch =
+                vaspMatches.length > 0
+                    ? vaspMatches[0]
+                    : null;
+
+            const vasp =
+                primaryVaspMatch
+                    ? {
+                        name:
+                            primaryVaspMatch.vasp ||
+                            "Unknown VASP",
+
+                        type:
+                            primaryVaspMatch.category ||
+                            "VASP",
+
+                        confidence:
+                            String(
+                                primaryVaspMatch.status ||
+                                ""
+                            ).toUpperCase() === "VERIFIED"
+                                ? "Verified database match"
+                                : "Database match",
+
+                        verified:
+                            String(
+                                primaryVaspMatch.status ||
+                                ""
+                            ).toUpperCase() === "VERIFIED",
+
+                        note:
+                            `Matched address ${primaryVaspMatch.address} from ${primaryVaspMatch.source}.`,
+
+                        address:
+                            primaryVaspMatch.address,
+
+                        country:
+                            primaryVaspMatch.country,
+
+                        status:
+                            primaryVaspMatch.status,
+
+                        source:
+                            primaryVaspMatch.source
+                    }
+                    : null;
 
             const risk =
                 calculateRiskScore(
@@ -5063,6 +5198,20 @@ app.post(
                     network.standard,
 
                 token,
+
+                depth,
+
+                depth_window:
+                    depth === "all"
+                        ? "ALL_AVAILABLE"
+                        : depth === 5
+                            ? "0-7_DAYS"
+                            : `0-${depth}_DAYS`,
+
+                total_indexed_transactions:
+                    allTransactions.length,
+
+                vasp,
 
                 contract:
                     network.contract,
