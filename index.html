@@ -1524,6 +1524,21 @@
                 12px;
         }
 
+        /* ===== 24H LIVE TRACKING ===== */
+        .live-track-panel { margin-top: 14px; }
+        .live-track-actions { display:grid; grid-template-columns: 1fr auto auto; gap:10px; align-items:center; }
+        .live-track-actions button { width:auto; min-width:130px; }
+        .live-track-card { margin-top:12px; border:1px solid #18313d; background:#071016; border-radius:9px; padding:14px; }
+        .live-track-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px; }
+        .live-track-stat { border:1px solid #18313d; border-radius:8px; padding:11px; background:#0b171e; }
+        .live-track-stat small { display:block; color:#8297a3; font-size:10px; text-transform:uppercase; letter-spacing:.5px; }
+        .live-track-stat strong { display:block; margin-top:5px; font-size:18px; }
+        .live-track-list { margin-top:12px; max-height:300px; overflow:auto; }
+        .live-track-row { padding:9px 0; border-bottom:1px solid #18313d; font-size:11px; }
+        .live-track-row:last-child { border-bottom:0; }
+        .live-track-row a { font-family:Consolas,monospace; }
+        @media (max-width:900px) { .live-track-actions,.live-track-grid { grid-template-columns:1fr; } .live-track-actions button { width:100%; } }
+
         .integration-grid {
             display:
                 grid;
@@ -1862,6 +1877,30 @@
 
     </div>
 
+    <!-- =====================================================
+         24H LIVE TRACKING
+    ====================================================== -->
+    <div class="panel live-track-panel">
+        <div class="panel-title">
+            <h3>📡 Live Track — 24 Hours</h3>
+            <span class="badge" id="liveTrackBadge">OFF</span>
+        </div>
+        <div class="live-track-actions">
+            <div class="status" id="liveTrackStatus" style="margin-top:0;">Enter a wallet above, then start Live Track.</div>
+            <button id="liveTrackStartBtn" class="success-button" type="button" onclick="startLiveTrack()">LIVE TRACK</button>
+            <button id="liveTrackStopBtn" class="danger" type="button" onclick="stopLiveTrack()" disabled>STOP</button>
+        </div>
+        <div class="live-track-card">
+            <div class="live-track-grid">
+                <div class="live-track-stat"><small>Past 24 Hours</small><strong id="livePastCount">0</strong></div>
+                <div class="live-track-stat"><small>Future 24H Detected</small><strong id="liveFutureCount">0</strong></div>
+                <div class="live-track-stat"><small>Time Remaining</small><strong id="liveRemaining">—</strong></div>
+            </div>
+            <div id="liveTrackList" class="live-track-list">
+                <div class="status">No live tracking data yet.</div>
+            </div>
+        </div>
+    </div>
 
     <!-- =====================================================
          OVERVIEW
@@ -2542,6 +2581,9 @@ let latestEvidence = null;
 let realtimeTimer = null;
 
 let watchedWallet = null;
+let liveTrackStartedAt = null;
+let liveTrackCountdownTimer = null;
+let liveTrackLastFutureHashes = new Set();
 
 
 /* =========================================================
@@ -2941,10 +2983,8 @@ async function analyzeWallet() {
         token = "USDT";
     }
 
-    const depth =
-        Number(
-            depthInput.value
-        ) || 1;
+    const depthValue = String(depthInput.value || "1").toLowerCase();
+    const depth = depthValue === "all" ? "all" : (Number(depthValue) || 1);
 
     if (!wallet) {
         alert(
@@ -5123,6 +5163,106 @@ function renderGraph(graph) {
 
 
 /* =========================================================
+   24H LIVE TRACKING
+========================================================= */
+
+function formatLiveTime(ms) {
+    if (ms <= 0) return "00:00:00";
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return [h,m,s].map((v,i)=> i===0 ? String(v).padStart(2,"0") : String(v).padStart(2,"0")).join(":");
+}
+
+function updateLiveTrackCountdown() {
+    const el = document.getElementById("liveRemaining");
+    if (!el || !liveTrackStartedAt) return;
+    const remaining = (liveTrackStartedAt + 24*60*60*1000) - Date.now();
+    el.textContent = formatLiveTime(Math.max(0, remaining));
+    if (remaining <= 0) {
+        el.textContent = "24H COMPLETE";
+        clearInterval(liveTrackCountdownTimer);
+        liveTrackCountdownTimer = null;
+    }
+}
+
+async function startLiveTrack() {
+    const wallet = document.getElementById("walletInput")?.value.trim();
+    const selectedAsset = document.getElementById("blockchainInput")?.value || "tron-usdt";
+    const blockchain = selectedAsset === "ethereum-usdt" ? "ethereum" : selectedAsset === "bnb-usdt" ? "bnb" : "tron";
+    const token = "USDT";
+    const status = document.getElementById("liveTrackStatus");
+    if (!wallet) { status.className="status error"; status.textContent="Enter a wallet address first."; document.getElementById("walletInput")?.focus(); return; }
+    if (!isValidBlockchainAddressForLive(wallet, blockchain)) { status.className="status error"; status.textContent=`Wrong address / Does not match selected blockchain: ${blockchain.toUpperCase()}.`; return; }
+    try {
+        status.className="status"; status.textContent="Starting 24-hour live tracking...";
+        const response = await fetchJson(API_BASE_URL + "/api/realtime/watch", { method:"POST", headers:{"Content-Type":"application/json","Accept":"application/json"}, body:JSON.stringify({wallet, blockchain, token, windowHours:24}) });
+        if (!response.success) throw new Error(response.error || "Unable to start live tracking.");
+        watchedWallet = wallet;
+        liveTrackStartedAt = Date.now();
+        liveTrackLastFutureHashes = new Set();
+        document.getElementById("liveTrackBadge").textContent="LIVE";
+        document.getElementById("liveTrackBadge").className="badge success";
+        document.getElementById("liveTrackStartBtn").disabled=true;
+        document.getElementById("liveTrackStopBtn").disabled=false;
+        status.className="status success";
+        status.textContent=`Live tracking active for ${blockchain === "tron" ? "TRON / TRC-20" : blockchain.toUpperCase()} — past 24h loaded; future transactions will appear automatically.`;
+        startRealtimePolling();
+        pollLiveTrack24h();
+        clearInterval(liveTrackCountdownTimer);
+        liveTrackCountdownTimer=setInterval(updateLiveTrackCountdown,1000);
+        updateLiveTrackCountdown();
+    } catch (error) {
+        status.className="status error"; status.textContent=error.message || "Unable to start live tracking.";
+    }
+}
+
+async function stopLiveTrack() {
+    if (!watchedWallet) return;
+    try { await fetchJson(API_BASE_URL + "/api/realtime/unwatch", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({wallet:watchedWallet})}); } catch {}
+    clearRealtimePolling();
+    clearInterval(liveTrackCountdownTimer); liveTrackCountdownTimer=null;
+    watchedWallet=null; liveTrackStartedAt=null;
+    document.getElementById("liveTrackBadge").textContent="OFF";
+    document.getElementById("liveTrackBadge").className="badge";
+    document.getElementById("liveTrackStartBtn").disabled=false;
+    document.getElementById("liveTrackStopBtn").disabled=true;
+    document.getElementById("liveTrackRemaining");
+    document.getElementById("liveRemaining").textContent="—";
+    const status=document.getElementById("liveTrackStatus"); status.className="status"; status.textContent="Live tracking stopped.";
+}
+
+function isValidBlockchainAddressForLive(wallet, blockchain) {
+    if (blockchain === "tron") return typeof isValidTronAddress === "function" && isValidTronAddress(wallet);
+    if (blockchain === "solana") return typeof isValidSolanaAddress === "function" && isValidSolanaAddress(wallet);
+    return typeof isValidEvmAddress === "function" && isValidEvmAddress(wallet);
+}
+
+async function pollLiveTrack24h() {
+    if (!watchedWallet) return;
+    try {
+        const data = await fetchJson(API_BASE_URL + "/api/realtime/24h?wallet=" + encodeURIComponent(watchedWallet));
+        if (!data.success) return;
+        document.getElementById("livePastCount").textContent = String(data.past24h?.count ?? 0);
+        document.getElementById("liveFutureCount").textContent = String(data.future24h?.count ?? 0);
+        const future = Array.isArray(data.future24h?.transactions) ? data.future24h.transactions : [];
+        renderLiveTrackRows(future, data.past24h?.count ?? 0);
+    } catch (error) { console.error("24H live tracking error:", error); }
+}
+
+function renderLiveTrackRows(transactions, pastCount) {
+    const container=document.getElementById("liveTrackList");
+    if (!container) return;
+    if (!transactions.length) { container.innerHTML=`<div class="status">No new future transactions detected yet. Past 24h: <strong>${Number(pastCount).toLocaleString()}</strong>. The tracker is watching for new activity.</div>`; return; }
+    container.innerHTML = transactions.slice(0,50).map(tx => {
+        const hash=tx.hash || tx.transaction_hash || tx.txID || tx.transaction_id || "";
+        const explorer=tx.explorer_url || tx.explorerUrl || "";
+        return `<div class="live-track-row"><strong>${escapeHtml(tx.direction || tx.type || "Transaction")}</strong> · ${escapeHtml(formatNumber(tx.amount))} USDT · ${escapeHtml(tx.timestamp || tx.date || "—")} ${explorer ? `· <a href="${explorer}" target="_blank" rel="noopener noreferrer">${escapeHtml(hash ? hash.slice(0,18)+"…" : "VIEW")}</a>` : ""}</div>`;
+    }).join("");
+}
+
+/* =========================================================
    REALTIME POLLING
 ========================================================= */
 
@@ -5187,6 +5327,7 @@ async function pollRealtime() {
         renderRealtimeAlerts(
             data
         );
+        pollLiveTrack24h();
 
     } catch (
         error
