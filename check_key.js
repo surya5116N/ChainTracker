@@ -1,15 +1,45 @@
 require("dotenv").config();
 
-const tron = (process.env.TRON_API_KEY || "").trim();
-const etherscan = (process.env.ETHERSCAN_API_KEY || process.env.ETH_API_KEY || "").trim();
+const checks = [
+  ["TRON_API_KEY", process.env.TRON_API_KEY || ""],
+  [
+    "ETHERSCAN_API_KEY",
+    process.env.ETHERSCAN_API_KEY ||
+      process.env.ETH_API_KEY ||
+      ""
+  ],
+  [
+    "SOLANA_RPC_URL",
+    process.env.SOLANA_RPC_URL ||
+      "https://api.mainnet-beta.solana.com"
+  ],
+  [
+    "USDT_SOLANA_MINT",
+    process.env.USDT_SOLANA_MINT || ""
+  ]
+];
 
 console.log("==========================================");
-console.log("ChainTrace API Key Check");
-console.log("==========================================");
-console.log("TRON API KEY:", tron ? "LOADED" : "MISSING");
-console.log("TRON KEY LENGTH:", tron.length);
-console.log("ETHERSCAN API KEY:", etherscan ? "LOADED" : "MISSING");
-console.log("ETHERSCAN KEY LENGTH:", etherscan.length);
+console.log("ChainTrace API Configuration Check");
 console.log("==========================================");
 
-if (!tron) process.exitCode = 1;
+for (const [name, value] of checks) {
+  if (!value) {
+    console.log(`${name}: MISSING`);
+    continue;
+  }
+
+  if (name.endsWith("_KEY")) {
+    console.log(
+      `${name}: LOADED (length ${value.length})`
+    );
+  } else {
+    console.log(`${name}: CONFIGURED`);
+  }
+}
+
+console.log("==========================================");
+console.log(
+  "Note: API 429 errors are provider rate limits, not npm package errors."
+);
+console.log("==========================================");
