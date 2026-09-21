@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -59,6 +59,24 @@ const INDEXER_MAX_PAGES = Math.min(
         1
     ),
     100
+);
+
+// Multi-hop trace safety limits. "ALL" follows the outgoing flow until
+// there are no new outgoing counterparties, subject to these hard limits.
+const TRACE_MAX_DEPTH = Math.min(
+    Math.max(
+        Number(process.env.TRACE_MAX_DEPTH) || 10,
+        1
+    ),
+    20
+);
+
+const TRACE_MAX_ADDRESSES = Math.min(
+    Math.max(
+        Number(process.env.TRACE_MAX_ADDRESSES) || 100,
+        10
+    ),
+    500
 );
 
 const INDEXER_CACHE_TTL =
@@ -703,49 +721,60 @@ function createHash(
 async function fetchJson(
     url,
     options = {},
-    timeoutMs = 20000
+    timeoutMs = 20000,
+    maxRetries = 2
 ) {
-    const controller =
-        new AbortController();
+    let lastError = null;
 
-    const timeout =
-        setTimeout(
-            () => {
-                controller.abort();
-            },
-            timeoutMs
-        );
+    for (
+        let attempt = 0;
+        attempt <= maxRetries;
+        attempt++
+    ) {
+        const controller =
+            new AbortController();
 
-    try {
-        const response =
-            await fetch(
-                url,
-                {
-                    ...options,
-                    signal:
-                        controller.signal
-                }
+        const timeout =
+            setTimeout(
+                () => {
+                    controller.abort();
+                },
+                timeoutMs
             );
 
-        const text =
-            await response.text();
-
-        let data;
-
         try {
-            data =
-                text
-                    ? JSON.parse(
-                          text
-                      )
-                    : null;
-        } catch {
-            data = text;
-        }
+            const response =
+                await fetch(
+                    url,
+                    {
+                        ...options,
+                        signal:
+                            controller.signal
+                    }
+                );
 
-        if (
-            !response.ok
-        ) {
+            const text =
+                await response.text();
+
+            let data;
+
+            try {
+                data =
+                    text
+                        ? JSON.parse(
+                              text
+                          )
+                        : null;
+            } catch {
+                data = text;
+            }
+
+            if (
+                response.ok
+            ) {
+                return data;
+            }
+
             const error =
                 new Error(
                     `HTTP ${response.status}`
@@ -757,16 +786,96 @@ async function fetchJson(
             error.data =
                 data;
 
+            // Retry only transient upstream failures.
+            if (
+                (
+                    response.status === 429 ||
+                    response.status === 502 ||
+                    response.status === 503 ||
+                    response.status === 504
+                ) &&
+                attempt < maxRetries
+            ) {
+                const retryAfter =
+                    Number(
+                        response.headers.get(
+                            "retry-after"
+                        )
+                    );
+
+                const delay =
+                    Number.isFinite(
+                        retryAfter
+                    )
+                        ? Math.min(
+                            Math.max(
+                                retryAfter * 1000,
+                                500
+                            ),
+                            5000
+                        )
+                        : Math.min(
+                            1000 * Math.pow(
+                                2,
+                                attempt
+                            ),
+                            4000
+                        );
+
+                await new Promise(
+                    resolve =>
+                        setTimeout(
+                            resolve,
+                            delay
+                        )
+                );
+
+                lastError = error;
+                continue;
+            }
+
             throw error;
+
+        } catch (error) {
+            lastError = error;
+
+            if (
+                attempt < maxRetries &&
+                (
+                    error?.name === "AbortError" ||
+                    error?.status === 429 ||
+                    error?.status === 502 ||
+                    error?.status === 503 ||
+                    error?.status === 504
+                )
+            ) {
+                await new Promise(
+                    resolve =>
+                        setTimeout(
+                            resolve,
+                            Math.min(
+                                1000 * Math.pow(
+                                    2,
+                                    attempt
+                                ),
+                                4000
+                            )
+                        )
+                );
+
+                continue;
+            }
+
+            throw error;
+
+        } finally {
+            clearTimeout(
+                timeout
+            );
         }
-
-        return data;
-
-    } finally {
-        clearTimeout(
-            timeout
-        );
     }
+
+    throw lastError || new Error("Upstream request failed.");
 }
 
 
@@ -2286,9 +2395,6 @@ function normalizeTransaction(
         transaction_id:
             hash,
 
-        txHash:
-            hash,
-
         blockchain:
             network,
 
@@ -2324,12 +2430,6 @@ function normalizeTransaction(
             ),
 
         explorer_url:
-            getTransactionExplorerUrl(
-                hash,
-                network
-            ),
-
-        explorerUrl:
             getTransactionExplorerUrl(
                 hash,
                 network
@@ -2919,11 +3019,13 @@ function getComplaintDatabase() {
 
 function objectContainsAddress(
     object,
-    address
+    address,
+    visited = new Set()
 ) {
 
     if (
-        !object ||
+        object === null ||
+        object === undefined ||
         !address
     ) {
         return false;
@@ -2934,38 +3036,65 @@ function objectContainsAddress(
             address
         );
 
-    const values =
-        Object.values(
+    if (
+        typeof object === "string"
+    ) {
+        const value =
+            normalizeWallet(
+                object
+            );
+
+        return (
+            value === target ||
             object
+                .toLowerCase()
+                .includes(
+                    target
+                )
         );
+    }
+
+    if (
+        typeof object !== "object"
+    ) {
+        return false;
+    }
+
+    if (
+        visited.has(object)
+    ) {
+        return false;
+    }
+
+    visited.add(object);
+
+    if (Array.isArray(object)) {
+        for (const item of object) {
+            if (
+                objectContainsAddress(
+                    item,
+                    address,
+                    visited
+                )
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     for (
-        const value of values
+        const value of Object.values(object)
     ) {
-
         if (
-            typeof value ===
-            "string"
+            objectContainsAddress(
+                value,
+                address,
+                visited
+            )
         ) {
-
-            if (
-                normalizeWallet(
-                    value
-                ) ===
-                target
-            ) {
-                return true;
-            }
-
-            if (
-                value
-                    .toLowerCase()
-                    .includes(
-                        target
-                    )
-            ) {
-                return true;
-            }
+            return true;
         }
     }
 
@@ -3016,15 +3145,10 @@ function buildVaspAttribution(
     transactions
 ) {
 
-    // Recursive tracing follows OUTGOING transfers only. Incoming senders are
-    // historical counterparties, not downstream hops.
-    const downstreamTransactions = transactions.filter(
-        tx => tx.direction === "Sent" && tx.to
-    );
-
-    const counterparties = getUniqueCounterparties(
-        downstreamTransactions
-    );
+    const counterparties =
+        getUniqueCounterparties(
+            transactions
+        );
 
     const results =
         [];
@@ -5068,6 +5192,64 @@ app.post(
                     transactions
                 );
 
+            const primaryVaspMatch =
+                vaspMatches.length > 0
+                    ? vaspMatches[0]
+                    : null;
+
+            const vasp =
+                primaryVaspMatch
+                    ? {
+                        name:
+                            primaryVaspMatch.vasp ||
+                            "Unknown VASP",
+                        type:
+                            primaryVaspMatch.category ||
+                            "VASP",
+                        confidence:
+                            primaryVaspMatch.status === "VERIFIED"
+                                ? "Verified database match"
+                                : "Database match",
+                        verified:
+                            String(
+                                primaryVaspMatch.status || ""
+                            ).toUpperCase() === "VERIFIED",
+                        note:
+                            `Matched address ${primaryVaspMatch.address} from ${primaryVaspMatch.source}.`,
+                        address:
+                            primaryVaspMatch.address,
+                        country:
+                            primaryVaspMatch.country,
+                        status:
+                            primaryVaspMatch.status,
+                        source:
+                            primaryVaspMatch.source
+                    }
+                    : null;
+
+            const traceLevels = new Set(
+                transactions
+                    .map(
+                        tx =>
+                            Number(
+                                tx.trace_level
+                            )
+                    )
+                    .filter(
+                        Number.isFinite
+                    )
+            );
+
+            const traceDepthReached =
+                trace
+                    ? Math.max(
+                        1,
+                        ...Array.from(
+                            traceLevels
+                        )
+                    )
+                    : 1;
+
             const risk =
                 calculateRiskScore(
                     transactions,
@@ -5183,10 +5365,32 @@ app.post(
                 complaint_matches:
                     complaints,
 
+                vasp,
+
                 vaspMatches,
 
                 vasp_attribution:
                     vaspMatches,
+
+                traceDepthRequested:
+                    depth,
+
+                traceDepthReached,
+
+                traceAddressCount:
+                    trace
+                        ? Math.max(
+                            1,
+                            new Set(
+                                transactions.flatMap(
+                                    tx => [
+                                        tx.from,
+                                        tx.to
+                                    ]
+                                ).filter(Boolean)
+                            ).size
+                        )
+                        : 1,
 
                 fundFlow,
 
@@ -5252,6 +5456,235 @@ app.post(
                             req.body?.blockchain
                         )
                 });
+        }
+    }
+);
+
+
+/* =========================================================
+   EVIDENCE PRESERVATION API
+========================================================= */
+
+app.post(
+    "/api/evidence/preserve",
+    async (
+        req,
+        res
+    ) => {
+
+        try {
+
+            const wallet =
+                safeString(
+                    req.body?.wallet
+                );
+
+            const blockchain =
+                normalizeBlockchain(
+                    req.body?.blockchain
+                );
+
+            const token =
+                String(
+                    req.body?.token ||
+                    "USDT"
+                ).toUpperCase();
+
+            if (!wallet) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Wallet address is required."
+                });
+            }
+
+            if (
+                !isValidBlockchainAddress(
+                    wallet,
+                    blockchain
+                )
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    error:
+                        `Invalid ${getBlockchainName(blockchain)} wallet address.`
+                });
+            }
+
+            const rawTransactions =
+                Array.isArray(
+                    req.body?.transactions
+                )
+                    ? req.body.transactions
+                    : [];
+
+            // Store only evidentiary fields. This keeps the payload small and
+            // avoids "request entity too large" when 2,000+ transactions exist.
+            const transactions =
+                rawTransactions.map(
+                    tx => ({
+                        hash:
+                            tx?.hash ||
+                            tx?.transaction_id ||
+                            tx?.transactionHash ||
+                            tx?.txHash ||
+                            "",
+                        from:
+                            tx?.from ||
+                            "",
+                        to:
+                            tx?.to ||
+                            "",
+                        amount:
+                            tx?.amount ??
+                            tx?.value ??
+                            0,
+                        token:
+                            tx?.token ||
+                            token,
+                        direction:
+                            tx?.direction ||
+                            tx?.type ||
+                            "Unknown",
+                        timestamp:
+                            tx?.timestamp ||
+                            tx?.timeStamp ||
+                            null,
+                        block:
+                            tx?.block ||
+                            tx?.blockNumber ||
+                            null,
+                        explorer_url:
+                            tx?.explorer_url ||
+                            tx?.explorerUrl ||
+                            ""
+                    })
+                )
+                .filter(
+                    tx =>
+                        tx.hash ||
+                        tx.from ||
+                        tx.to
+                );
+
+            const canonical =
+                JSON.stringify({
+                    wallet,
+                    blockchain,
+                    token,
+                    transactions
+                });
+
+            const evidenceHash =
+                createHash(
+                    canonical
+                );
+
+            const caseId =
+                "CT-" +
+                new Date()
+                    .toISOString()
+                    .replace(
+                        /[-:.TZ]/g,
+                        ""
+                    ) +
+                "-" +
+                evidenceHash.slice(
+                    0,
+                    8
+                ).toUpperCase();
+
+            const evidence = {
+
+                caseId,
+
+                preservedAt:
+                    new Date()
+                        .toISOString(),
+
+                wallet,
+
+                blockchain,
+
+                blockchain_name:
+                    getBlockchainName(
+                        blockchain
+                    ),
+
+                token,
+
+                transactionCount:
+                    transactions.length,
+
+                transactionHashes:
+                    transactions
+                        .map(
+                            tx =>
+                                tx.hash
+                        )
+                        .filter(Boolean),
+
+                evidenceSha256:
+                    evidenceHash,
+
+                risk:
+                    req.body?.risk ??
+                    null,
+
+                riskText:
+                    safeString(
+                        req.body?.riskText
+                    ) || null,
+
+                alerts:
+                    Array.isArray(
+                        req.body?.alerts
+                    )
+                        ? req.body.alerts
+                        : [],
+
+                fraudTypologies:
+                    Array.isArray(
+                        req.body?.fraudTypologies
+                    )
+                        ? req.body.fraudTypologies
+                        : [],
+
+                recommendations:
+                    Array.isArray(
+                        req.body?.recommendations
+                    )
+                        ? req.body.recommendations
+                        : [],
+
+                complaintCrossReference:
+                    req.body?.complaintCrossReference ??
+                    null,
+
+                vasp:
+                    req.body?.vasp ??
+                    null,
+
+                transactions
+            };
+
+            return res.json({
+                success: true,
+                evidence
+            });
+
+        } catch (error) {
+
+            console.error(
+                "EVIDENCE PRESERVATION ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                error:
+                    error.message ||
+                    "Evidence preservation failed."
+            });
         }
     }
 );
@@ -5403,8 +5836,9 @@ async function traceWallet(
     token = "USDT",
     depth = 2,
     visited = new Set(),
-    traceState = null,
-    currentDepth = 1
+    state = {
+        addresses: new Set()
+    }
 ) {
 
     const network =
@@ -5414,20 +5848,14 @@ async function traceWallet(
 
     const maxDepth =
         depth === "all"
-            ? Number.MAX_SAFE_INTEGER
+            ? TRACE_MAX_DEPTH
             : Math.min(
                 Math.max(
                     Number(depth) || 1,
                     1
                 ),
-                5
+                TRACE_MAX_DEPTH
             );
-
-    const state =
-        traceState || {
-            count: 0,
-            maxAddresses: 100
-        };
 
     const walletKey =
         normalizeWallet(
@@ -5437,39 +5865,60 @@ async function traceWallet(
     if (
         visited.has(walletKey)
     ) {
+
         return {
             wallet,
             blockchain: network,
             depth: 0,
-            current_depth: currentDepth,
+            current_depth: visited.size,
             transactions: [],
-            transaction_count: 0,
             counterparties: [],
-            graph: { nodes: [], edges: [] },
+            outgoingCounterparties: [],
+            nodes: [],
+            edges: [],
             children: []
         };
     }
 
     if (
-        state.count >= state.maxAddresses
+        state.addresses.size >=
+        TRACE_MAX_ADDRESSES
     ) {
+
         return {
             wallet,
+            wallet_short: shortenAddress(wallet),
             blockchain: network,
-            depth: 0,
-            current_depth: currentDepth,
+            blockchain_name: getBlockchainName(network),
+            token,
+            depth: maxDepth,
+            current_depth: visited.size,
             source: "TRACE_LIMIT",
             transactions: [],
             transaction_count: 0,
             counterparties: [],
-            graph: { nodes: [], edges: [] },
-            children: []
+            outgoingCounterparties: [],
+            graph: {
+                nodes: [],
+                edges: []
+            },
+            children: [],
+            limit_reached: true
         };
     }
 
-    const nextVisited = new Set(visited);
-    nextVisited.add(walletKey);
-    state.count += 1;
+    const nextVisited =
+        new Set(
+            visited
+        );
+
+    nextVisited.add(
+        walletKey
+    );
+
+    state.addresses.add(
+        walletKey
+    );
 
     const indexed =
         await scalableBlockchainIndex(
@@ -5480,28 +5929,41 @@ async function traceWallet(
 
     const transactions =
         sortTransactions(
-            indexed.transactions.map(
-                tx =>
-                    normalizeTransaction(
-                        tx,
-                        wallet,
-                        network
-                    )
-            )
-        );
-
-    // Downstream tracing follows outgoing transfers only.
-    const downstreamTransactions =
-        transactions.filter(
-            tx =>
-                tx.direction === "Sent" &&
-                tx.to
+            indexed.transactions
+                .map(
+                    tx =>
+                        normalizeTransaction(
+                            tx,
+                            wallet,
+                            network
+                        )
+                )
         );
 
     const counterparties =
         getUniqueCounterparties(
-            downstreamTransactions
+            transactions
         );
+
+    // IMPORTANT: recursion follows only outgoing transfers.
+    // Incoming counterparties must never become downstream trace hops.
+    const outgoingCounterparties = Array.from(
+        new Map(
+            transactions
+                .filter(
+                    tx =>
+                        tx.direction === "Sent" &&
+                        tx.to &&
+                        normalizeWallet(tx.to) !== walletKey
+                )
+                .map(
+                    tx => [
+                        normalizeWallet(tx.to),
+                        tx.to
+                    ]
+                )
+        ).values()
+    );
 
     const graph =
         buildFundFlowGraph(
@@ -5509,70 +5971,124 @@ async function traceWallet(
             wallet
         );
 
+    const currentDepth =
+        visited.size;
+
     const result = {
+
         wallet,
-        wallet_short: shortenAddress(wallet),
-        blockchain: network,
-        blockchain_name: getBlockchainName(network),
+
+        wallet_short:
+            shortenAddress(
+                wallet
+            ),
+
+        blockchain:
+            network,
+
+        blockchain_name:
+            getBlockchainName(
+                network
+            ),
+
         token,
-        depth: depth === "all" ? "all" : maxDepth,
-        current_depth: currentDepth,
-        source: indexed.source,
+
+        depth:
+            maxDepth,
+
+        current_depth:
+            currentDepth,
+
+        source:
+            indexed.source,
+
         transactions,
-        transaction_count: transactions.length,
+
+        transaction_count:
+            transactions.length,
+
         counterparties,
+
+        outgoingCounterparties,
+
         graph,
-        children: []
+
+        children: [],
+
+        limit_reached:
+            false
     };
 
+    // Root = depth 1. Child wallets are depth 2, etc.
     if (
-        currentDepth >= maxDepth
+        currentDepth >=
+        maxDepth - 1
     ) {
         return result;
     }
 
-    // Keep branching bounded while preserving genuine outgoing fund flow.
-    const nextAddresses =
-        counterparties.slice(0, 8);
-
     for (
-        const nextAddress of nextAddresses
+        const nextAddress of outgoingCounterparties
     ) {
-        const nextKey =
-            normalizeWallet(nextAddress);
 
         if (
-            nextVisited.has(nextKey) ||
-            state.count >= state.maxAddresses
+            state.addresses.size >=
+            TRACE_MAX_ADDRESSES
+        ) {
+            result.limit_reached = true;
+            break;
+        }
+
+        const nextKey =
+            normalizeWallet(
+                nextAddress
+            );
+
+        if (
+            nextVisited.has(
+                nextKey
+            )
         ) {
             continue;
         }
 
         try {
+
             const child =
                 await traceWallet(
                     nextAddress,
                     network,
                     token,
-                    depth,
+                    maxDepth,
                     nextVisited,
-                    state,
-                    currentDepth + 1
+                    state
                 );
 
-            result.children.push(child);
-        } catch (error) {
+            result.children.push(
+                child
+            );
+
+        } catch (
+            error
+        ) {
+
             result.children.push({
-                wallet: nextAddress,
-                blockchain: network,
-                current_depth: currentDepth + 1,
-                error: error.message
+
+                wallet:
+                    nextAddress,
+
+                blockchain:
+                    network,
+
+                error:
+                    error.message
             });
         }
     }
 
     return result;
 }
+
 
 /* =========================================================
    FLATTEN TRACE TRANSACTIONS
@@ -6102,28 +6618,6 @@ function createRealtimeAlert(
 }
 
 
-function getTransactionEpochMs(tx) {
-    const raw = tx?.timestamp ?? tx?.timeStamp ?? tx?.date;
-    if (typeof raw === "number" && Number.isFinite(raw)) {
-        return raw < 100000000000 ? raw * 1000 : raw;
-    }
-    if (typeof raw === "string") {
-        const numeric = Number(raw);
-        if (Number.isFinite(numeric)) return numeric < 100000000000 ? numeric * 1000 : numeric;
-        const parsed = Date.parse(raw);
-        return Number.isFinite(parsed) ? parsed : NaN;
-    }
-    return NaN;
-}
-
-function getLast24HoursTransactions(transactions, nowMs = Date.now()) {
-    const cutoff = nowMs - 24 * 60 * 60 * 1000;
-    return (Array.isArray(transactions) ? transactions : []).filter(tx => {
-        const t = getTransactionEpochMs(tx);
-        return Number.isFinite(t) && t >= cutoff && t <= nowMs;
-    });
-}
-
 /* =========================================================
    REALTIME WATCH CHECK
 ========================================================= */
@@ -6153,12 +6647,6 @@ async function checkRealtimeWatcher(
                             )
                     )
             );
-
-        const past24hTransactions =
-            getLast24HoursTransactions(normalized);
-
-        watcher.past24hTransactions =
-            past24hTransactions;
 
         const newTransactions =
             [];
@@ -6198,17 +6686,6 @@ async function checkRealtimeWatcher(
                     tx
                 );
             }
-        }
-
-        if (
-            watcher.initialized &&
-            newTransactions.length
-        ) {
-            watcher.future24hTransactions =
-                [
-                    ...newTransactions,
-                    ...(watcher.future24hTransactions || [])
-                ].slice(0, 500);
         }
 
         if (
@@ -6404,15 +6881,6 @@ app.post(
                     seenHashes:
                         new Set(),
 
-                    past24hTransactions:
-                        [],
-
-                    future24hTransactions:
-                        [],
-
-                    trackingStartedAt:
-                        new Date().toISOString(),
-
                     active:
                         true
                 };
@@ -6435,9 +6903,6 @@ app.post(
 
                 watcher.lastError =
                     null;
-                watcher.trackingStartedAt =
-                    new Date().toISOString();
-                watcher.future24hTransactions = [];
             }
 
             await checkRealtimeWatcher(
@@ -6577,51 +7042,6 @@ app.post(
     }
 );
 
-
-/* =========================================================
-   REALTIME 24H SNAPSHOT
-========================================================= */
-
-app.get(
-    "/api/realtime/24h",
-    (req, res) => {
-        const wallet = safeString(req.query?.wallet);
-        if (!wallet) {
-            return res.status(400).json({ success:false, error:"Wallet address is required." });
-        }
-
-        const watcher = realtimeWatchers.get(normalizeWallet(wallet));
-        if (!watcher) {
-            return res.json({
-                success:true,
-                watching:false,
-                wallet,
-                past24h:{count:0, transactions:[]},
-                future24h:{count:0, transactions:[]}
-            });
-        }
-
-        return res.json({
-            success:true,
-            watching:Boolean(watcher.active),
-            wallet:watcher.wallet,
-            blockchain:watcher.blockchain,
-            blockchain_name:getBlockchainName(watcher.blockchain),
-            token:watcher.token,
-            trackingStartedAt:watcher.trackingStartedAt,
-            lastCheck:watcher.lastCheck,
-            lastError:watcher.lastError,
-            past24h:{
-                count:(watcher.past24hTransactions || []).length,
-                transactions:(watcher.past24hTransactions || []).slice(0,500)
-            },
-            future24h:{
-                count:(watcher.future24hTransactions || []).length,
-                transactions:(watcher.future24hTransactions || []).slice(0,500)
-            }
-        });
-    }
-);
 
 /* =========================================================
    REALTIME STATUS
