@@ -1873,32 +1873,10 @@
                 id="analyzeBtn"
                 onclick="analyzeWallet()"
             >
+            
                 ANALYZE
             </button>
 
-        </div>
-
-        <div class="relation-analyze-row" style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:10px;">
-            <input
-                id="relationInput"
-                type="text"
-                placeholder="Enter related / counterparty wallet address to analyze"
-                autocomplete="off"
-                spellcheck="false"
-            >
-            <button
-                id="relationAnalyzeBtn"
-                type="button"
-                class="secondary"
-                onclick="analyzeRelationWallet()"
-                style="width:auto;min-width:180px;"
-            >
-                ANALYZE RELATION
-            </button>
-        </div>
-
-        <div class="status" style="margin-top:7px;">
-            Relation analysis uses the entered related wallet as the investigation target.
         </div>
 
         <div
@@ -2453,7 +2431,7 @@
                             Timestamp
                         </th>
 
-                    
+                       
 
                     </tr>
 
@@ -2998,46 +2976,6 @@ if (investigationNetworkSelect) {
     updateInvestigationNetworkLabel();
 }
 
-
-/* =========================================================
-   RELATION ANALYZE
-========================================================= */
-
-function analyzeRelationWallet() {
-    const relationInput = document.getElementById("relationInput");
-    const walletInput = document.getElementById("walletInput");
-    const relationButton = document.getElementById("relationAnalyzeBtn");
-    const value = String(relationInput?.value || "").trim();
-
-    if (!value) {
-        const status = document.getElementById("status");
-        if (status) {
-            status.className = "status error";
-            status.innerText = "❌ Enter a related / counterparty wallet address first.";
-        }
-        relationInput?.focus();
-        return;
-    }
-
-    if (walletInput) {
-        walletInput.value = value;
-        walletInput.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-
-    // Keep the selected Depth visible, but analyze the same real transaction
-    // set regardless of which Depth option is selected.
-    if (relationButton) {
-        relationButton.disabled = true;
-        relationButton.innerText = "ANALYZING...";
-    }
-
-    Promise.resolve(analyzeWallet()).finally(() => {
-        if (relationButton) {
-            relationButton.disabled = false;
-            relationButton.innerText = "ANALYZE RELATION";
-        }
-    });
-}
 
 /* =========================================================
    ANALYZE
