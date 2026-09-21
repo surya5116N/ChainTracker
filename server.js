@@ -1447,6 +1447,71 @@ async function fetchTronNativeTransfers(
 }
 
 /* =========================================================
+   TRON RATE-LIMIT CONTROL
+========================================================= */
+
+const TRON_MIN_REQUEST_INTERVAL_MS = Math.max(
+    Number(process.env.TRON_MIN_REQUEST_INTERVAL_MS) || 150,
+    50
+);
+
+const TRON_MAX_RETRIES = Math.min(
+    Math.max(
+        Number(process.env.TRON_MAX_RETRIES) || 4,
+        1
+    ),
+    8
+);
+
+let tronRequestQueue = Promise.resolve();
+let tronLastRequestAt = 0;
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getRetryAfterMs(response, data = {}) {
+    const retryAfterHeader = response?.headers?.get?.("retry-after");
+
+    if (retryAfterHeader) {
+        const seconds = Number(retryAfterHeader);
+        if (Number.isFinite(seconds) && seconds >= 0) {
+            return Math.ceil(seconds * 1000);
+        }
+
+        const retryDate = Date.parse(retryAfterHeader);
+        if (Number.isFinite(retryDate)) {
+            return Math.max(0, retryDate - Date.now());
+        }
+    }
+
+    const message =
+        data?.Error ||
+        data?.error ||
+        data?.message ||
+        data?.status?.message ||
+        "";
+
+    const match = String(message).match(
+        /(?:suspended for|retry after|try again in)\s+(\d+)\s*s/i
+    );
+
+    if (match) {
+        return Number(match[1]) * 1000;
+    }
+
+    return 0;
+}
+
+function enqueueTronRequest(task) {
+    const run = tronRequestQueue.then(task, task);
+
+    tronRequestQueue = run.catch(() => undefined);
+
+    return run;
+}
+
+/* =========================================================
    TRON GET
 ========================================================= */
 
@@ -1454,93 +1519,148 @@ async function tronGet(
     endpoint,
     params = {}
 ) {
-    const url =
-        new URL(
-            TRON_API + endpoint
+    return enqueueTronRequest(async () => {
+        const url =
+            new URL(
+                TRON_API + endpoint
+            );
+
+        Object.entries(params).forEach(
+            ([key, value]) => {
+                if (
+                    value !== undefined &&
+                    value !== null
+                ) {
+                    url.searchParams.set(
+                        key,
+                        String(value)
+                    );
+                }
+            }
         );
 
-    Object.entries(params).forEach(
-        ([key, value]) => {
-            if (
-                value !== undefined &&
-                value !== null
-            ) {
-                url.searchParams.set(
-                    key,
-                    String(value)
+        for (let attempt = 0; attempt <= TRON_MAX_RETRIES; attempt++) {
+            const elapsed = Date.now() - tronLastRequestAt;
+            if (elapsed < TRON_MIN_REQUEST_INTERVAL_MS) {
+                await sleep(
+                    TRON_MIN_REQUEST_INTERVAL_MS - elapsed
                 );
             }
-        }
-    );
 
-    console.log(
-        "TRON GET:",
-        url.toString()
-    );
+            tronLastRequestAt = Date.now();
 
-    const response =
-        await fetch(
-            url,
-            {
-                method: "GET",
-                headers: TRON_HEADERS
+            console.log(
+                "TRON GET:",
+                url.toString(),
+                attempt > 0
+                    ? `(retry ${attempt}/${TRON_MAX_RETRIES})`
+                    : ""
+            );
+
+            let response;
+            let text = "";
+            let data = {};
+
+            try {
+                response =
+                    await fetch(
+                        url,
+                        {
+                            method: "GET",
+                            headers: TRON_HEADERS
+                        }
+                    );
+
+                text = await response.text();
+
+                try {
+                    data =
+                        text
+                            ? JSON.parse(text)
+                            : {};
+                } catch {
+                    data = { raw: text };
+                }
+            } catch (error) {
+                if (attempt < TRON_MAX_RETRIES) {
+                    const backoff = Math.min(
+                        1000 * Math.pow(2, attempt),
+                        16000
+                    );
+                    const jitter = Math.floor(Math.random() * 500);
+
+                    console.warn(
+                        `TRON NETWORK RETRY ${attempt + 1}/${TRON_MAX_RETRIES}: waiting ${backoff + jitter}ms`
+                    );
+
+                    await sleep(backoff + jitter);
+                    continue;
+                }
+
+                throw error;
             }
-        );
 
-    const text =
-        await response.text();
+            if (response.ok) {
+                return data;
+            }
 
-    let data = {};
+            console.error(
+                "TRON API ERROR:",
+                response.status,
+                data
+            );
 
-    try {
-        data =
-            text
-                ? JSON.parse(text)
-                : {};
-    } catch {
-        data = {
-            raw: text
-        };
-    }
+            if (response.status === 401) {
+                throw new Error(
+                    "TRON API 401 Unauthorized. Check TRON_API_KEY."
+                );
+            }
 
-    if (!response.ok) {
+            if (response.status === 403) {
+                throw new Error(
+                    "TRON API 403 Forbidden. Check API key permissions."
+                );
+            }
 
-        console.error(
-            "TRON API ERROR:",
-            response.status,
-            data
-        );
+            if (response.status === 429) {
+                if (attempt >= TRON_MAX_RETRIES) {
+                    throw new Error(
+                        "TRON API rate limit reached after automatic retries. Please try again later."
+                    );
+                }
 
-        if (
-            response.status === 401
-        ) {
+                const serverWait =
+                    getRetryAfterMs(
+                        response,
+                        data
+                    );
+
+                const exponentialWait =
+                    Math.min(
+                        1000 * Math.pow(2, attempt),
+                        16000
+                    );
+
+                const waitMs =
+                    Math.max(
+                        serverWait,
+                        exponentialWait
+                    ) +
+                    Math.floor(Math.random() * 500);
+
+                console.warn(
+                    `TRON 429: waiting ${Math.ceil(waitMs / 1000)}s before retry ${attempt + 1}/${TRON_MAX_RETRIES}`
+                );
+
+                await sleep(waitMs);
+                continue;
+            }
+
             throw new Error(
-                "TRON API 401 Unauthorized. Check TRON_API_KEY."
+                `TRON API error: ${response.status}`
             );
         }
-
-        if (
-            response.status === 403
-        ) {
-            throw new Error(
-                "TRON API 403 Forbidden. Check API key permissions."
-            );
-        }
-
-        if (
-            response.status === 429
-        ) {
-            throw new Error(
-                "TRON API rate limit reached."
-            );
-        }
-
-        throw new Error(
-            `TRON API error: ${response.status}`
-        );
-    }
-
-    return data;
+    });
 }
 
 
