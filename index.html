@@ -1739,6 +1739,29 @@
             display:block;
         }
 
+
+        .live-tx-item {
+            border: 1px solid #18313d;
+            background: #071016;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+        .live-tx-meta {
+            color: #8297a3;
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+        .trace-btn {
+            width: auto;
+            padding: 7px 10px;
+            font-size: 10px;
+        }
+        .trace-cell {
+            text-align: center;
+        }
+
 </style>
 
 </head>
@@ -2209,6 +2232,52 @@
     </div>
 
 
+
+    <!-- =====================================================
+         LIVE TRACK — 24 HOURS
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+            <h3>📡 Live Track — 24 Hours</h3>
+            <span id="liveTrackBadge" class="badge">OFF</span>
+        </div>
+
+        <div class="cards" style="grid-template-columns:repeat(4,1fr);">
+            <div class="card">
+                <div class="card-label">Past 24 Hours</div>
+                <div class="card-value" id="livePastCount">0</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Future 24H Detected</div>
+                <div class="card-value" id="liveFutureCount">0</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Tracking</div>
+                <div class="card-value" id="liveTrackingState">OFF</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Time Remaining</div>
+                <div class="card-value" id="liveTimeRemaining">24:00:00</div>
+            </div>
+        </div>
+
+        <div class="actions" style="margin-top:12px;">
+            <button type="button" onclick="startLiveTrack()">LIVE TRACK</button>
+            <button type="button" class="danger" onclick="stopLiveTrack()">STOP</button>
+        </div>
+
+        <div id="liveTrackStatus" class="status">
+            Start Live Track after entering a wallet address.
+        </div>
+
+        <div id="liveTrackList" style="margin-top:12px;">
+            <p class="status">No 24-hour tracking transactions yet.</p>
+        </div>
+
+    </div>
+
     <!-- =====================================================
          EVIDENCE
     ====================================================== -->
@@ -2377,14 +2446,6 @@
                             To
                         </th>
 
-                        <th>
-                            Timestamp
-                        </th>
-
-                        <th>
-                            Transaction
-                        </th>
-
                     </tr>
 
                 </thead>
@@ -2395,7 +2456,7 @@
 
                     <tr>
 
-                        <td colspan="6">
+                        <td colspan="5">
                             No transactions loaded.
                         </td>
 
@@ -2410,127 +2471,6 @@
     </div>
 
 
-    <!-- =====================================================
-         PLATFORM STATUS
-    ====================================================== -->
-
-    <div class="panel">
-
-        <div class="panel-title">
-
-            <h3>
-                ⚙️ Platform Capability Status
-            </h3>
-
-            <span class="badge">
-                SYSTEM
-            </span>
-
-        </div>
-
-        <div class="feature-grid">
-
-            <div class="feature-item feature-active">
-                ✅ TRON / TRC-20 Analysis
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Transaction Tracing
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Risk Analysis
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Fund Flow Visualization
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Automated Alerts
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Fraud Typology Detection
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Investigator Recommendations
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Complaint Cross-Reference
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ JSON Investigation Report
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Real-Time Wallet Monitoring
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Evidence Preservation
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ API Health Monitoring
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ Ethereum / ERC-20 Integration
-            </div>
-
-            <div class="feature-item feature-active">
-                ✅ BNB Chain / BEP-20 Integration
-            </div>
-
-            <div class="feature-item feature-pending">
-                ⚠️ Solana / SPL USDT
-            </div>
-
-            
-
-        </div>
-
-    </div>
-
-
-    <!-- =====================================================
-         INTEGRATION STATUS
-    ====================================================== -->
-
-    <div class="panel">
-
-        <div class="panel-title">
-
-            <h3>
-                🔌 Integration Status
-            </h3>
-
-            <span class="badge">
-                API
-            </span>
-
-        </div>
-
-        <div
-            id="integrationContainer"
-            class="integration-grid"
-        >
-
-            <div class="integration-item">
-                Checking integrations...
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
 <script>
 
 let latestAnalysis = null;
@@ -2542,6 +2482,10 @@ let latestEvidence = null;
 let realtimeTimer = null;
 
 let watchedWallet = null;
+let liveTrackStartedAt = null;
+let liveTrackTimer = null;
+let liveTrackLastFutureHashes = new Set();
+
 
 
 /* =========================================================
@@ -2563,7 +2507,6 @@ document.addEventListener(
 
         checkHealth();
 
-        checkIntegrations();
 
         const transactionSearchInput =
             document.getElementById("transactionSearchInput");
@@ -4329,125 +4272,145 @@ function renderTransactionRows(transactions) {
     const container = document.getElementById("transactionBody");
     if (!container) return;
 
-    if (!Array.isArray(transactions) || transactions.length === 0) {
+    container.innerHTML = "";
+
+    if (!transactions || transactions.length === 0) {
         container.innerHTML = `
             <tr>
-                <td colspan="6" style="color:#8297a3;">
-                    No matching transactions found.
+                <td colspan="5" style="color:#8297a3; padding:12px;">
+                    No transactions found.
                 </td>
             </tr>
         `;
+        updateTransactionSearchMeta(0, 0, "");
         return;
     }
 
-    const visibleTransactions = transactions.slice(0, MAX_VISIBLE_TRANSACTION_ROWS);
-    container.innerHTML = "";
+    const rows = transactions.slice(0, MAX_VISIBLE_TRANSACTION_ROWS);
 
-    visibleTransactions.forEach(tx => {
+    rows.forEach(tx => {
         const row = document.createElement("tr");
+        const type = String(tx.type || tx.direction || "—");
+        const amount = tx.amount ?? tx.value ?? 0;
+        const from = String(tx.from || "—");
+        const to = String(tx.to || "—");
+        const explorer = tx.explorerUrl || tx.explorer_url || "";
 
         row.innerHTML = `
-            <td class="${
-                tx.type === "Received"
-                    ? "risk-low"
-                    : "risk-high"
-            }">
-                ${escapeHtml(
-                    tx.type ||
-                    tx.direction ||
-                    (
-                        String(tx.to || "").toLowerCase() ===
-                        String(latestAnalysis?.wallet || "").toLowerCase()
-                            ? "Received"
-                            : String(tx.from || "").toLowerCase() ===
-                              String(latestAnalysis?.wallet || "").toLowerCase()
-                                ? "Sent"
-                                : "Unknown"
-                    )
-                )}
-            </td>
-
-            <td>
-                ${formatNumber(tx.amount)}
-                ${escapeHtml(tx.token || latestAnalysis?.token || "USDT")}
-            </td>
-
-            <td>
-                ${
-                    tx.fromExplorerUrl
-                        ? `
-                            <a
-                                href="${tx.fromExplorerUrl}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="${escapeHtml(tx.from || "")}" 
-                            >
-                                ${escapeHtml(tx.from || "—")}
-                            </a>
-                        `
-                        : escapeHtml(tx.from || "—")
-                }
-            </td>
-
-            <td>
-                ${
-                    tx.toExplorerUrl
-                        ? `
-                            <a
-                                href="${tx.toExplorerUrl}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="${escapeHtml(tx.to || "")}" 
-                            >
-                                ${escapeHtml(tx.to || "—")}
-                            </a>
-                        `
-                        : escapeHtml(tx.to || "—")
-                }
-            </td>
-
-            <td>
-                ${escapeHtml(tx.timestamp || "—")}
-            </td>
-
-            <td>
-                ${
-                    tx.explorerUrl
-                        ? `
-                            <a
-                                href="${tx.explorerUrl}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                ${
-                                    String(latestAnalysis?.blockchain || "tron").toLowerCase() === "ethereum"
-                                        ? "ETHERSCAN"
-                                        : String(latestAnalysis?.blockchain || "tron").toLowerCase() === "bnb"
-                                            ? "BSCSCAN"
-                                            : String(latestAnalysis?.blockchain || "tron").toLowerCase() === "solana"
-                                                ? "SOLSCAN"
-                                                : "TRONSCAN"
-                                }
-                            </a>
-                        `
-                        : "—"
-                }
+            <td>${escapeHtml(type)}</td>
+            <td>${escapeHtml(String(amount))} USDT</td>
+            <td>${escapeHtml(shortenAddress(from))}</td>
+            <td>${escapeHtml(shortenAddress(to))}</td>
+            <td class="trace-cell">
+                <button
+                    type="button"
+                    class="secondary trace-btn"
+                    data-trace-wallet="${escapeHtml(
+                        String(
+                            String(type).toLowerCase().includes("sent") ||
+                            String(tx.from || "").toLowerCase() === String(latestAnalysis?.wallet || "").toLowerCase()
+                                ? to
+                                : from
+                        )
+                    )}"
+                    data-tx-hash="${escapeHtml(String(tx.hash || tx.transaction_id || ""))}"
+                    data-explorer="${escapeHtml(explorer)}"
+                >TRACE</button>
             </td>
         `;
-
         container.appendChild(row);
+    });
+
+    container.querySelectorAll(".trace-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const wallet = btn.dataset.traceWallet || "";
+            traceTransactionWallet(wallet);
+        });
     });
 
     if (transactions.length > MAX_VISIBLE_TRANSACTION_ROWS) {
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td colspan="6" style="color:#8297a3; padding:12px;">
+            <td colspan="5" style="color:#8297a3; padding:12px;">
                 Showing first <strong>${MAX_VISIBLE_TRANSACTION_ROWS.toLocaleString()}</strong>
                 of <strong>${transactions.length.toLocaleString()}</strong> matching transactions.
-                Refine the search to narrow the result.
             </td>
         `;
         container.appendChild(row);
+    }
+}
+
+
+async function traceTransactionWallet(wallet) {
+    if (!wallet) {
+        alert("Trace wallet address not available.");
+        return;
+    }
+
+    const blockchain =
+        latestAnalysis?.blockchain ||
+        document.getElementById("blockchainInput")?.value?.split("-")[0] ||
+        "tron";
+    const token = latestAnalysis?.token || "USDT";
+    const depth =
+        Number(document.getElementById("depthInput")?.value) || 2;
+
+    const status = document.getElementById("status");
+
+    try {
+        if (status) {
+            status.className = "status";
+            status.innerText = `Tracing ${shortenAddress(wallet)}...`;
+        }
+
+        const data = await fetchJson(
+            API_BASE_URL + "/api/trace",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    wallet,
+                    blockchain,
+                    token,
+                    depth
+                })
+            }
+        );
+
+        if (!data.success) {
+            throw new Error(data.error || "Trace failed.");
+        }
+
+        latestAnalysis = {
+            ...latestAnalysis,
+            wallet: data.wallet || wallet,
+            blockchain: data.blockchain || blockchain,
+            token: data.token || token,
+            trace: data.trace,
+            graph: data.graph
+        };
+
+        if (document.getElementById("walletInput")) {
+            document.getElementById("walletInput").value =
+                data.wallet || wallet;
+        }
+
+        renderGraph(data.graph);
+
+        if (status) {
+            status.className = "status success";
+            status.innerText =
+                `Trace completed — ${shortenAddress(data.wallet || wallet)}.`;
+        }
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+        if (status) {
+            status.className = "status error";
+            status.innerText = `Trace failed: ${error.message}`;
+        } else {
+            alert(`Trace failed: ${error.message}`);
+        }
     }
 }
 
@@ -5122,6 +5085,227 @@ function renderGraph(graph) {
 }
 
 
+
+/* =========================================================
+   LIVE TRACK — 24 HOURS
+========================================================= */
+
+function getLiveTrackWallet() {
+    return (
+        document.getElementById("watchWalletInput")?.value?.trim() ||
+        document.getElementById("walletInput")?.value?.trim() ||
+        latestAnalysis?.wallet ||
+        ""
+    );
+}
+
+function getSelectedBlockchain() {
+    const value = document.getElementById("blockchainInput")?.value || "tron-usdt";
+    if (value === "ethereum-usdt") return "ethereum";
+    if (value === "bnb-usdt") return "bnb";
+    return "tron";
+}
+
+function setLiveTrackStatus(message, kind = "") {
+    const el = document.getElementById("liveTrackStatus");
+    if (!el) return;
+    el.className = `status ${kind}`.trim();
+    el.innerText = message;
+}
+
+function updateLiveTrackCountdown() {
+    const el = document.getElementById("liveTimeRemaining");
+    if (!el || !liveTrackStartedAt) return;
+
+    const end = liveTrackStartedAt + 24 * 60 * 60 * 1000;
+    const remaining = Math.max(0, end - Date.now());
+
+    const h = Math.floor(remaining / 3600000);
+    const m = Math.floor((remaining % 3600000) / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+
+    el.innerText =
+        `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+
+    if (remaining <= 0) {
+        stopLiveTrack(true);
+    }
+}
+
+function renderLiveTrackTransactions(data) {
+    const past = Array.isArray(data.past24hTransactions)
+        ? data.past24hTransactions
+        : [];
+    const future = Array.isArray(data.future24hTransactions)
+        ? data.future24hTransactions
+        : [];
+
+    setText("livePastCount", past.length);
+    setText("liveFutureCount", future.length);
+    setText("liveTrackingState", data.watching ? "LIVE" : "OFF");
+
+    const list = document.getElementById("liveTrackList");
+    if (!list) return;
+
+    const combined = [
+        ...future.map(tx => ({...tx, liveType: "NEW"}),
+        ...past.map(tx => ({...tx, liveType: "PAST"}))
+    ].sort((a,b) => {
+        const ta = Number(a.timestampMs || a.block_timestamp || 0);
+        const tb = Number(b.timestampMs || b.block_timestamp || 0);
+        return tb - ta;
+    }).slice(0, 100);
+
+    if (!combined.length) {
+        list.innerHTML = `<p class="status">No 24-hour tracking transactions found.</p>`;
+        return;
+    }
+
+    list.innerHTML = combined.map(tx => {
+        const from = tx.from || "—";
+        const to = tx.to || "—";
+        const amount = tx.amount ?? tx.value ?? 0;
+        return `
+            <div class="live-tx-item">
+                <strong>
+                    ${tx.liveType === "NEW" ? "🟢 NEW" : "⚪ PAST 24H"}
+                    · ${escapeHtml(String(amount))} USDT
+                </strong>
+                <div class="live-tx-meta">
+                    From: ${escapeHtml(shortenAddress(from))}<br>
+                    To: ${escapeHtml(shortenAddress(to))}
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+async function pollLiveTrack() {
+    const wallet = getLiveTrackWallet();
+    if (!wallet) return;
+
+    try {
+        const qs =
+            `wallet=${encodeURIComponent(wallet)}` +
+            `&blockchain=${encodeURIComponent(getSelectedBlockchain())}` +
+            `&token=USDT`;
+
+        const data = await fetchJson(
+            API_BASE_URL + "/api/realtime/24h?" + qs
+        );
+
+        renderLiveTrackTransactions(data);
+
+        if (data.watching) {
+            liveTrackStartedAt =
+                data.trackingStartedAt
+                    ? new Date(data.trackingStartedAt).getTime()
+                    : liveTrackStartedAt;
+
+            const badge = document.getElementById("liveTrackBadge");
+            if (badge) {
+                badge.innerText = "LIVE";
+                badge.className = "badge risk-low";
+            }
+
+            updateLiveTrackCountdown();
+        }
+    } catch (error) {
+        setLiveTrackStatus(error.message || "Live Track unavailable.", "error");
+    }
+}
+
+async function startLiveTrack() {
+    const wallet = getLiveTrackWallet();
+    const blockchain = getSelectedBlockchain();
+
+    if (!wallet) {
+        alert("Enter a wallet address first.");
+        return;
+    }
+
+    try {
+        const data = await fetchJson(
+            API_BASE_URL + "/api/realtime/watch",
+            {
+                method: "POST",
+                headers: {"Content-Type":"application/json"},
+                body: JSON.stringify({
+                    wallet,
+                    blockchain,
+                    token: "USDT",
+                    windowHours: 24
+                })
+            }
+        );
+
+        if (!data.success) {
+            throw new Error(data.error || "Unable to start Live Track.");
+        }
+
+        liveTrackStartedAt =
+            data.trackingStartedAt
+                ? new Date(data.trackingStartedAt).getTime()
+                : Date.now();
+
+        const badge = document.getElementById("liveTrackBadge");
+        if (badge) {
+            badge.innerText = "LIVE";
+            badge.className = "badge risk-low";
+        }
+
+        setLiveTrackStatus(
+            "Live tracking active. Historical 24H + newly detected transactions will appear here.",
+            "success"
+        );
+
+        clearInterval(liveTrackTimer);
+        liveTrackTimer = setInterval(() => {
+            pollLiveTrack();
+            updateLiveTrackCountdown();
+        }, 15000);
+
+        await pollLiveTrack();
+    } catch (error) {
+        setLiveTrackStatus(error.message || "Unable to start Live Track.", "error");
+    }
+}
+
+async function stopLiveTrack(autoStopped = false) {
+    const wallet = getLiveTrackWallet();
+
+    clearInterval(liveTrackTimer);
+    liveTrackTimer = null;
+
+    if (wallet) {
+        try {
+            await fetchJson(
+                API_BASE_URL + "/api/realtime/unwatch",
+                {
+                    method: "POST",
+                    headers: {"Content-Type":"application/json"},
+                    body: JSON.stringify({wallet})
+                }
+            );
+        } catch (error) {
+            console.error("Live Track stop error:", error);
+        }
+    }
+
+    const badge = document.getElementById("liveTrackBadge");
+    if (badge) {
+        badge.innerText = "OFF";
+        badge.className = "badge";
+    }
+
+    setText("liveTrackingState", "OFF");
+    if (autoStopped) {
+        setLiveTrackStatus("24-hour tracking window completed.", "success");
+    } else {
+        setLiveTrackStatus("Live tracking stopped.");
+    }
+}
+
 /* =========================================================
    REALTIME POLLING
 ========================================================= */
@@ -5187,6 +5371,10 @@ async function pollRealtime() {
         renderRealtimeAlerts(
             data
         );
+
+        if (liveTrackStartedAt) {
+            pollLiveTrack();
+        }
 
     } catch (
         error
@@ -5583,128 +5771,7 @@ function printReport() {
    INTEGRATIONS
 ========================================================= */
 
-async function checkIntegrations() {
 
-    const container =
-        document.getElementById(
-            "integrationContainer"
-        );
-
-    if (!container) return;
-
-    try {
-
-        let data;
-
-        try {
-            data =
-                await fetchJson(
-                    API_BASE_URL +
-                        "/api/integration/status"
-                );
-        } catch {
-            data =
-                await fetchJson(
-                    API_BASE_URL +
-                        "/api/health"
-                );
-        }
-
-        const integrations =
-            data.integrations || {};
-
-        const tronReady =
-            Boolean(
-                data.tronApiKey === "loaded" ||
-                data.blockchainSupport?.tron ||
-                data.integrations?.tron
-            );
-
-        const evmReady =
-            Boolean(
-                data.integrations?.etherscan ||
-                data.blockchainSupport?.ethereum ||
-                data.blockchainSupport?.bnb ||
-                data.authentication?.externalApi ||
-                data.authentication?.etherscan
-            );
-
-        container.innerHTML = `
-            <div class="integration-item">
-                <strong>Backend API</strong>
-                <p class="json-small">ONLINE</p>
-            </div>
-
-            <div class="integration-item">
-                <strong>TRON / TRC-20</strong>
-                <p class="json-small">
-                    ${tronReady ? "READY" : "CHECK API KEY"}
-                </p>
-            </div>
-
-            <div class="integration-item">
-                <strong>Ethereum / ERC-20</strong>
-                <p class="json-small">
-                    ${evmReady ? "READY" : "CHECK API KEY"}
-                </p>
-            </div>
-
-            <div class="integration-item">
-                <strong>BNB Chain / BEP-20</strong>
-                <p class="json-small">
-                    ${evmReady ? "READY" : "CHECK API KEY"}
-                </p>
-            </div>
-
-            <div class="integration-item">
-                <strong>External API</strong>
-                <p class="json-small">
-                    ${
-                        integrations.externalApi
-                            ? "CONFIGURED"
-                            : "LOCAL / NOT CONFIGURED"
-                    }
-                </p>
-            </div>
-
-            <div class="integration-item">
-                <strong>NCRP</strong>
-                <p class="json-small">
-                    ${
-                        integrations.ncrp
-                            ? "CONFIGURED"
-                            : "LOCAL / NOT CONFIGURED"
-                    }
-                </p>
-            </div>
-
-            <div class="integration-item">
-                <strong>SAHYOG</strong>
-                <p class="json-small">
-                    ${
-                        integrations.sahyog
-                            ? "CONFIGURED"
-                            : "LOCAL / NOT CONFIGURED"
-                    }
-                </p>
-            </div>
-        `;
-
-    } catch (error) {
-
-        container.innerHTML = `
-            <div class="integration-item">
-                <strong>Integration Status</strong>
-                <p class="json-small">
-                    ${escapeHtml(
-                        error.message ||
-                        "Backend unavailable."
-                    )}
-                </p>
-            </div>
-        `;
-    }
-}
 
 
 /* =========================================================
