@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "1mb" }));
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -59,24 +59,6 @@ const INDEXER_MAX_PAGES = Math.min(
         1
     ),
     100
-);
-
-// Multi-hop trace safety limits. "ALL" follows the outgoing flow until
-// there are no new outgoing counterparties, subject to these hard limits.
-const TRACE_MAX_DEPTH = Math.min(
-    Math.max(
-        Number(process.env.TRACE_MAX_DEPTH) || 10,
-        1
-    ),
-    20
-);
-
-const TRACE_MAX_ADDRESSES = Math.min(
-    Math.max(
-        Number(process.env.TRACE_MAX_ADDRESSES) || 100,
-        10
-    ),
-    500
 );
 
 const INDEXER_CACHE_TTL =
@@ -721,60 +703,49 @@ function createHash(
 async function fetchJson(
     url,
     options = {},
-    timeoutMs = 20000,
-    maxRetries = 2
+    timeoutMs = 20000
 ) {
-    let lastError = null;
+    const controller =
+        new AbortController();
 
-    for (
-        let attempt = 0;
-        attempt <= maxRetries;
-        attempt++
-    ) {
-        const controller =
-            new AbortController();
+    const timeout =
+        setTimeout(
+            () => {
+                controller.abort();
+            },
+            timeoutMs
+        );
 
-        const timeout =
-            setTimeout(
-                () => {
-                    controller.abort();
-                },
-                timeoutMs
+    try {
+        const response =
+            await fetch(
+                url,
+                {
+                    ...options,
+                    signal:
+                        controller.signal
+                }
             );
 
+        const text =
+            await response.text();
+
+        let data;
+
         try {
-            const response =
-                await fetch(
-                    url,
-                    {
-                        ...options,
-                        signal:
-                            controller.signal
-                    }
-                );
+            data =
+                text
+                    ? JSON.parse(
+                          text
+                      )
+                    : null;
+        } catch {
+            data = text;
+        }
 
-            const text =
-                await response.text();
-
-            let data;
-
-            try {
-                data =
-                    text
-                        ? JSON.parse(
-                              text
-                          )
-                        : null;
-            } catch {
-                data = text;
-            }
-
-            if (
-                response.ok
-            ) {
-                return data;
-            }
-
+        if (
+            !response.ok
+        ) {
             const error =
                 new Error(
                     `HTTP ${response.status}`
@@ -786,96 +757,16 @@ async function fetchJson(
             error.data =
                 data;
 
-            // Retry only transient upstream failures.
-            if (
-                (
-                    response.status === 429 ||
-                    response.status === 502 ||
-                    response.status === 503 ||
-                    response.status === 504
-                ) &&
-                attempt < maxRetries
-            ) {
-                const retryAfter =
-                    Number(
-                        response.headers.get(
-                            "retry-after"
-                        )
-                    );
-
-                const delay =
-                    Number.isFinite(
-                        retryAfter
-                    )
-                        ? Math.min(
-                            Math.max(
-                                retryAfter * 1000,
-                                500
-                            ),
-                            5000
-                        )
-                        : Math.min(
-                            1000 * Math.pow(
-                                2,
-                                attempt
-                            ),
-                            4000
-                        );
-
-                await new Promise(
-                    resolve =>
-                        setTimeout(
-                            resolve,
-                            delay
-                        )
-                );
-
-                lastError = error;
-                continue;
-            }
-
             throw error;
-
-        } catch (error) {
-            lastError = error;
-
-            if (
-                attempt < maxRetries &&
-                (
-                    error?.name === "AbortError" ||
-                    error?.status === 429 ||
-                    error?.status === 502 ||
-                    error?.status === 503 ||
-                    error?.status === 504
-                )
-            ) {
-                await new Promise(
-                    resolve =>
-                        setTimeout(
-                            resolve,
-                            Math.min(
-                                1000 * Math.pow(
-                                    2,
-                                    attempt
-                                ),
-                                4000
-                            )
-                        )
-                );
-
-                continue;
-            }
-
-            throw error;
-
-        } finally {
-            clearTimeout(
-                timeout
-            );
         }
-    }
 
-    throw lastError || new Error("Upstream request failed.");
+        return data;
+
+    } finally {
+        clearTimeout(
+            timeout
+        );
+    }
 }
 
 
@@ -3019,13 +2910,11 @@ function getComplaintDatabase() {
 
 function objectContainsAddress(
     object,
-    address,
-    visited = new Set()
+    address
 ) {
 
     if (
-        object === null ||
-        object === undefined ||
+        !object ||
         !address
     ) {
         return false;
@@ -3036,65 +2925,38 @@ function objectContainsAddress(
             address
         );
 
-    if (
-        typeof object === "string"
-    ) {
-        const value =
-            normalizeWallet(
-                object
-            );
-
-        return (
-            value === target ||
+    const values =
+        Object.values(
             object
-                .toLowerCase()
-                .includes(
-                    target
-                )
         );
-    }
 
-    if (
-        typeof object !== "object"
+    for (
+        const value of values
     ) {
-        return false;
-    }
 
-    if (
-        visited.has(object)
-    ) {
-        return false;
-    }
+        if (
+            typeof value ===
+            "string"
+        ) {
 
-    visited.add(object);
-
-    if (Array.isArray(object)) {
-        for (const item of object) {
             if (
-                objectContainsAddress(
-                    item,
-                    address,
-                    visited
-                )
+                normalizeWallet(
+                    value
+                ) ===
+                target
             ) {
                 return true;
             }
-        }
 
-        return false;
-    }
-
-    for (
-        const value of Object.values(object)
-    ) {
-        if (
-            objectContainsAddress(
-                value,
-                address,
-                visited
-            )
-        ) {
-            return true;
+            if (
+                value
+                    .toLowerCase()
+                    .includes(
+                        target
+                    )
+            ) {
+                return true;
+            }
         }
     }
 
@@ -5092,70 +4954,9 @@ app.post(
                             )
                     );
 
-            const directTransactions =
-                sortTransactions(
-                    normalized
-                );
-
-            /*
-             * Depth handling:
-             *   1   = root wallet only
-             *   2-5 = root wallet + downstream hops
-             *   all = all available trace levels (currently up to 5)
-             */
-            let trace = null;
-            let traceTransactions = [];
-
-            if (
-                depth === "all" ||
-                Number(depth) > 1
-            ) {
-                trace =
-                    await traceWallet(
-                        wallet,
-                        blockchain,
-                        token,
-                        depth
-                    );
-
-                traceTransactions =
-                    flattenTraceTransactions(
-                        trace
-                    );
-            }
-
-            const combinedMap =
-                new Map();
-
-            for (
-                const tx of [
-                    ...directTransactions,
-                    ...traceTransactions
-                ]
-            ) {
-                const key =
-                    [
-                        tx.hash,
-                        tx.from,
-                        tx.to,
-                        tx.amount
-                    ].join("|");
-
-                if (
-                    !combinedMap.has(key)
-                ) {
-                    combinedMap.set(
-                        key,
-                        tx
-                    );
-                }
-            }
-
             const transactions =
                 sortTransactions(
-                    Array.from(
-                        combinedMap.values()
-                    )
+                    normalized
                 );
 
             const summary =
@@ -5184,64 +4985,6 @@ app.post(
                 buildVaspAttribution(
                     transactions
                 );
-
-            const primaryVaspMatch =
-                vaspMatches.length > 0
-                    ? vaspMatches[0]
-                    : null;
-
-            const vasp =
-                primaryVaspMatch
-                    ? {
-                        name:
-                            primaryVaspMatch.vasp ||
-                            "Unknown VASP",
-                        type:
-                            primaryVaspMatch.category ||
-                            "VASP",
-                        confidence:
-                            primaryVaspMatch.status === "VERIFIED"
-                                ? "Verified database match"
-                                : "Database match",
-                        verified:
-                            String(
-                                primaryVaspMatch.status || ""
-                            ).toUpperCase() === "VERIFIED",
-                        note:
-                            `Matched address ${primaryVaspMatch.address} from ${primaryVaspMatch.source}.`,
-                        address:
-                            primaryVaspMatch.address,
-                        country:
-                            primaryVaspMatch.country,
-                        status:
-                            primaryVaspMatch.status,
-                        source:
-                            primaryVaspMatch.source
-                    }
-                    : null;
-
-            const traceLevels = new Set(
-                transactions
-                    .map(
-                        tx =>
-                            Number(
-                                tx.trace_level
-                            )
-                    )
-                    .filter(
-                        Number.isFinite
-                    )
-            );
-
-            const traceDepthReached =
-                trace
-                    ? Math.max(
-                        1,
-                        ...Array.from(
-                            traceLevels
-                        )
-                    )
-                    : 1;
 
             const risk =
                 calculateRiskScore(
@@ -5358,32 +5101,10 @@ app.post(
                 complaint_matches:
                     complaints,
 
-                vasp,
-
                 vaspMatches,
 
                 vasp_attribution:
                     vaspMatches,
-
-                traceDepthRequested:
-                    depth,
-
-                traceDepthReached,
-
-                traceAddressCount:
-                    trace
-                        ? Math.max(
-                            1,
-                            new Set(
-                                transactions.flatMap(
-                                    tx => [
-                                        tx.from,
-                                        tx.to
-                                    ]
-                                ).filter(Boolean)
-                            ).size
-                        )
-                        : 1,
 
                 fundFlow,
 
@@ -5402,17 +5123,7 @@ app.post(
 
                 timeline,
 
-                // Direct wallet transactions.
-                directTransactions,
-
-                // Multi-hop trace evidence.
-                trace,
-                traceTransactions,
-
-                // Transactions visible to the selected depth.
-                transactions,
-                allTransactions:
-                    transactions
+                transactions
             };
 
             setAnalysisCache(
@@ -5454,6 +5165,142 @@ app.post(
 );
 
 
+/* =========================================================
+   DIRECT TRANSACTION API
+========================================================= */
+
+app.post(
+    "/api/transactions",
+    async (
+        req,
+        res
+    ) => {
+
+        try {
+
+            const wallet =
+                safeString(
+                    req.body?.wallet ||
+                    req.body?.address
+                );
+
+            const blockchain =
+                normalizeBlockchain(
+                    req.body?.blockchain
+                );
+
+            const token =
+                String(
+                    req.body?.token ||
+                    "USDT"
+                ).toUpperCase();
+
+            if (!wallet) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        success:
+                            false,
+
+                        error:
+                            "Wallet address is required."
+                    });
+            }
+
+            if (
+                !isValidBlockchainAddress(
+                    wallet,
+                    blockchain
+                )
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        success:
+                            false,
+
+                        error:
+                            "Invalid wallet address."
+                    });
+            }
+
+            const result =
+                await scalableBlockchainIndex(
+                    wallet,
+                    token,
+                    blockchain
+                );
+
+            const transactions =
+                sortTransactions(
+                    result.transactions
+                        .map(
+                            tx =>
+                                normalizeTransaction(
+                                    tx,
+                                    wallet,
+                                    blockchain
+                                )
+                        )
+                );
+
+            res.json({
+
+                success:
+                    true,
+
+                wallet,
+
+                blockchain,
+
+                blockchain_name:
+                    getBlockchainName(
+                        blockchain
+                    ),
+
+                token,
+
+                contract:
+                    getUsdtContract(
+                        blockchain
+                    ),
+
+                source:
+                    result.source,
+
+                count:
+                    transactions.length,
+
+                transactions
+            });
+
+        } catch (
+            error
+        ) {
+
+            console.error(
+                "TRANSACTIONS ERROR:",
+                error
+            );
+
+            res
+                .status(500)
+                .json({
+
+                    success:
+                        false,
+
+                    error:
+                        error.message ||
+                        "Unable to fetch transactions."
+                });
+        }
+    }
+);
 /* =========================================================
    MULTI-HOP FUND TRACE
 ========================================================= */
