@@ -1873,10 +1873,32 @@
                 id="analyzeBtn"
                 onclick="analyzeWallet()"
             >
-            
                 ANALYZE
             </button>
 
+        </div>
+
+        <div class="relation-analyze-row" style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:10px;">
+            <input
+                id="relationInput"
+                type="text"
+                placeholder="Enter related / counterparty wallet address to analyze"
+                autocomplete="off"
+                spellcheck="false"
+            >
+            <button
+                id="relationAnalyzeBtn"
+                type="button"
+                class="secondary"
+                onclick="analyzeRelationWallet()"
+                style="width:auto;min-width:180px;"
+            >
+                ANALYZE RELATION
+            </button>
+        </div>
+
+        <div class="status" style="margin-top:7px;">
+            Relation analysis uses the entered related wallet as the investigation target.
         </div>
 
         <div
@@ -2980,6 +3002,46 @@ if (investigationNetworkSelect) {
 
 
 /* =========================================================
+   RELATION ANALYZE
+========================================================= */
+
+function analyzeRelationWallet() {
+    const relationInput = document.getElementById("relationInput");
+    const walletInput = document.getElementById("walletInput");
+    const relationButton = document.getElementById("relationAnalyzeBtn");
+    const value = String(relationInput?.value || "").trim();
+
+    if (!value) {
+        const status = document.getElementById("status");
+        if (status) {
+            status.className = "status error";
+            status.innerText = "❌ Enter a related / counterparty wallet address first.";
+        }
+        relationInput?.focus();
+        return;
+    }
+
+    if (walletInput) {
+        walletInput.value = value;
+        walletInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    // Keep the selected Depth visible, but analyze the same real transaction
+    // set regardless of which Depth option is selected.
+    if (relationButton) {
+        relationButton.disabled = true;
+        relationButton.innerText = "ANALYZING...";
+    }
+
+    Promise.resolve(analyzeWallet()).finally(() => {
+        if (relationButton) {
+            relationButton.disabled = false;
+            relationButton.innerText = "ANALYZE RELATION";
+        }
+    });
+}
+
+/* =========================================================
    ANALYZE
 ========================================================= */
 
@@ -3030,8 +3092,11 @@ async function analyzeWallet() {
         token = "USDT";
     }
 
-    const depthValue = String(depthInput.value || "1").toLowerCase();
-    const depth = depthValue === "all" ? "all" : (Number(depthValue) || 1);
+    // Depth is a UI selector only in this frontend build.
+    // Every selection intentionally requests the same real wallet transaction set.
+    // Send depth=1 to the backend so it does not start recursive multi-hop API calls.
+    const selectedDepth = String(depthInput?.value || "1").toLowerCase();
+    const depth = 1;
 
     if (!wallet) {
         status.className = "status error";
@@ -3084,7 +3149,7 @@ async function analyzeWallet() {
                 ? "Ethereum"
                 : blockchain === "bnb"
                     ? "BNB Chain"
-                    : "Solana"} wallet — ${token} — depth ${depth}...`;
+                    : "Solana"} wallet — ${token} — ${selectedDepth === "all" ? "ALL" : "Depth " + selectedDepth} (same transaction set)...`;
 
     button.disabled =
         true;
