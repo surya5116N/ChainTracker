@@ -62,7 +62,24 @@ const INDEXER_MAX_PAGES = Math.min(
 );
 
 const INDEXER_CACHE_TTL =
-    Number(process.env.INDEXER_CACHE_TTL_MS) || 30000;
+    Number(process.env.INDEXER_CACHE_TTL_MS) || 300000;
+
+// TRON request protection: serialize requests from this service and
+// automatically respect provider rate-limit cooldowns.
+const TRON_MIN_REQUEST_INTERVAL_MS = Math.max(
+    Number(process.env.TRON_MIN_REQUEST_INTERVAL_MS) || 1200,
+    0
+);
+const TRON_MAX_RETRIES = Math.min(
+    Math.max(Number(process.env.TRON_MAX_RETRIES) || 3, 0),
+    5
+);
+const tronRequestState = {
+    nextAllowedAt: 0,
+    queue: Promise.resolve()
+};
+const tronInflightRequests = new Map();
+
 
 const REALTIME_ALERT_INTERVAL =
     Math.max(
@@ -1448,98 +1465,155 @@ async function fetchTronNativeTransfers(
    TRON GET
 ========================================================= */
 
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getRetryDelayMs(response, data = {}) {
+    const retryAfter =
+        response?.headers?.get?.("retry-after") ||
+        response?.headers?.get?.("Retry-After");
+
+    if (retryAfter) {
+        const seconds = Number(retryAfter);
+        if (Number.isFinite(seconds)) {
+            return Math.max(1000, Math.ceil(seconds * 1000));
+        }
+
+        const dateMs = Date.parse(retryAfter);
+        if (Number.isFinite(dateMs)) {
+            return Math.max(1000, dateMs - Date.now());
+        }
+    }
+
+    const message = String(
+        data?.Error || data?.error || data?.message || ""
+    );
+    const match = message.match(/(\d+)\s*s/i);
+    if (match) {
+        return Math.max(1000, Number(match[1]) * 1000 + 250);
+    }
+
+    return 5000;
+}
+
+async function runTronRequest(task) {
+    const previous = tronRequestState.queue;
+    let release;
+    tronRequestState.queue = new Promise(resolve => {
+        release = resolve;
+    });
+
+    await previous;
+
+    try {
+        const wait = Math.max(
+            0,
+            tronRequestState.nextAllowedAt - Date.now()
+        );
+        if (wait > 0) await sleep(wait);
+
+        return await task();
+    } finally {
+        tronRequestState.nextAllowedAt =
+            Date.now() + TRON_MIN_REQUEST_INTERVAL_MS;
+        release();
+    }
+}
+
 async function tronGet(
     endpoint,
     params = {}
 ) {
-    const url =
-        new URL(
-            TRON_API + endpoint
-        );
+    const url = new URL(TRON_API + endpoint);
 
     Object.entries(params).forEach(
         ([key, value]) => {
-            if (
-                value !== undefined &&
-                value !== null
-            ) {
-                url.searchParams.set(
-                    key,
-                    String(value)
-                );
+            if (value !== undefined && value !== null) {
+                url.searchParams.set(key, String(value));
             }
         }
     );
 
-    console.log(
-        "TRON GET:",
-        url.toString()
-    );
+    const requestKey = url.toString();
+    const existing = tronInflightRequests.get(requestKey);
+    if (existing) return existing;
 
-    const response =
-        await fetch(
-            url,
-            {
+    const requestPromise = runTronRequest(async () => {
+        for (let attempt = 0; attempt <= TRON_MAX_RETRIES; attempt++) {
+            console.log("TRON GET:", url.toString());
+
+            const response = await fetch(url, {
                 method: "GET",
                 headers: TRON_HEADERS
+            });
+
+            const text = await response.text();
+            let data = {};
+
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch {
+                data = { raw: text };
             }
-        );
 
-    const text =
-        await response.text();
+            if (response.ok) return data;
 
-    let data = {};
+            console.error(
+                "TRON API ERROR:",
+                response.status,
+                data
+            );
+
+            if (response.status === 401) {
+                throw new Error(
+                    "TRON API 401 Unauthorized. Check TRON_API_KEY."
+                );
+            }
+
+            if (response.status === 403) {
+                throw new Error(
+                    "TRON API 403 Forbidden. Check API key permissions."
+                );
+            }
+
+            if (
+                response.status === 429 &&
+                attempt < TRON_MAX_RETRIES
+            ) {
+                const delay = getRetryDelayMs(response, data);
+                console.warn(
+                    `TRON rate limited. Waiting ${Math.ceil(delay / 1000)}s before retry ${attempt + 1}/${TRON_MAX_RETRIES}.`
+                );
+                tronRequestState.nextAllowedAt =
+                    Date.now() + delay;
+                await sleep(delay);
+                continue;
+            }
+
+            if (response.status === 429) {
+                throw new Error(
+                    "TRON API rate limit reached. The provider has temporarily suspended this API key; please wait and retry."
+                );
+            }
+
+            throw new Error(
+                `TRON API error: ${response.status}`
+            );
+        }
+
+        throw new Error("TRON API request failed after retries.");
+    });
+
+    tronInflightRequests.set(requestKey, requestPromise);
 
     try {
-        data =
-            text
-                ? JSON.parse(text)
-                : {};
-    } catch {
-        data = {
-            raw: text
-        };
+        return await requestPromise;
+    } finally {
+        tronInflightRequests.delete(requestKey);
     }
-
-    if (!response.ok) {
-
-        console.error(
-            "TRON API ERROR:",
-            response.status,
-            data
-        );
-
-        if (
-            response.status === 401
-        ) {
-            throw new Error(
-                "TRON API 401 Unauthorized. Check TRON_API_KEY."
-            );
-        }
-
-        if (
-            response.status === 403
-        ) {
-            throw new Error(
-                "TRON API 403 Forbidden. Check API key permissions."
-            );
-        }
-
-        if (
-            response.status === 429
-        ) {
-            throw new Error(
-                "TRON API rate limit reached."
-            );
-        }
-
-        throw new Error(
-            `TRON API error: ${response.status}`
-        );
-    }
-
-    return data;
 }
+
 
 
 /* =========================================================
@@ -1972,6 +2046,14 @@ async function scalableTronIndex(
     blockchain = "tron"
 ) {
 
+    const requestKey =
+        `wallet:${blockchain}:${normalizeWallet(wallet)}:${String(token).toUpperCase()}`;
+
+    const existingRequest = tronInflightRequests.get(requestKey);
+    if (existingRequest) return existingRequest;
+
+    const indexPromise = (async () => {
+
     const cached =
         getCachedTransactions(
             wallet,
@@ -2030,6 +2112,15 @@ async function scalableTronIndex(
         source:
             "TRONGRID"
     };
+    })();
+
+    tronInflightRequests.set(requestKey, indexPromise);
+
+    try {
+        return await indexPromise;
+    } finally {
+        tronInflightRequests.delete(requestKey);
+    }
 }
 
 
@@ -2476,39 +2567,6 @@ function summarizeTransactions(
             wallet
     };
 }
-async function fetchEtherscanWithRetry(url, attempts = 4) {
-    let lastError = null;
-
-    for (let attempt = 0; attempt < attempts; attempt++) {
-        try {
-            return await fetchJson(
-                url,
-                {
-                    headers: {
-                        Accept: "application/json"
-                    }
-                },
-                20000
-            );
-        } catch (error) {
-            lastError = error;
-            const status = Number(error?.status || 0);
-            const message = String(error?.data?.result || error?.message || "");
-            const rateLimited = status === 429 || /rate.?limit|too many|frequency/i.test(message);
-
-            if (!rateLimited || attempt === attempts - 1) {
-                throw error;
-            }
-
-            const waitMs = Math.min(8000, 1000 * Math.pow(2, attempt));
-            console.warn(`ETHERSCAN rate limit detected. Waiting ${waitMs}ms before retry ${attempt + 1}/${attempts - 1}.`);
-            await new Promise(resolve => setTimeout(resolve, waitMs));
-        }
-    }
-
-    throw lastError || new Error("Etherscan request failed.");
-}
-
 /* =========================================================
    EVM USDT TRANSACTION INDEXER
    Ethereum + BNB Chain
@@ -2600,8 +2658,15 @@ async function getEvmUsdtTransactions(
         try {
 
             data =
-                await fetchEtherscanWithRetry(
-                    url
+                await fetchJson(
+                    url,
+                    {
+                        headers: {
+                            Accept:
+                                "application/json"
+                        }
+                    },
+                    20000
                 );
 
         } catch (
