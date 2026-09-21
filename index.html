@@ -5148,13 +5148,17 @@ function renderLiveTrackTransactions(data) {
     if (!list) return;
 
     const combined = [
-        ...future.map(tx => ({...tx, liveType: "NEW"}),
-        ...past.map(tx => ({...tx, liveType: "PAST"}))
-    ].sort((a,b) => {
-        const ta = Number(a.timestampMs || a.block_timestamp || 0);
-        const tb = Number(b.timestampMs || b.block_timestamp || 0);
-        return tb - ta;
-    }).slice(0, 100);
+    ...future.map(tx => ({...tx, liveType: "NEW"})),
+    ...past.map(tx => ({...tx, liveType: "PAST"}))
+].sort((a, b) => {
+    const ta = Number(a.timestampMs || a.block_timestamp || 0);
+    const tb = Number(b.timestampMs || b.block_timestamp || 0);
+    return tb - ta;
+}).slice(0, 100);
+
+if (!combined.length) {
+    // empty state handling
+}
 
     if (!combined.length) {
         list.innerHTML = `<p class="status">No 24-hour tracking transactions found.</p>`;
