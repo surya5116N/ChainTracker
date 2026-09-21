@@ -2476,6 +2476,39 @@ function summarizeTransactions(
             wallet
     };
 }
+async function fetchEtherscanWithRetry(url, attempts = 4) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt < attempts; attempt++) {
+        try {
+            return await fetchJson(
+                url,
+                {
+                    headers: {
+                        Accept: "application/json"
+                    }
+                },
+                20000
+            );
+        } catch (error) {
+            lastError = error;
+            const status = Number(error?.status || 0);
+            const message = String(error?.data?.result || error?.message || "");
+            const rateLimited = status === 429 || /rate.?limit|too many|frequency/i.test(message);
+
+            if (!rateLimited || attempt === attempts - 1) {
+                throw error;
+            }
+
+            const waitMs = Math.min(8000, 1000 * Math.pow(2, attempt));
+            console.warn(`ETHERSCAN rate limit detected. Waiting ${waitMs}ms before retry ${attempt + 1}/${attempts - 1}.`);
+            await new Promise(resolve => setTimeout(resolve, waitMs));
+        }
+    }
+
+    throw lastError || new Error("Etherscan request failed.");
+}
+
 /* =========================================================
    EVM USDT TRANSACTION INDEXER
    Ethereum + BNB Chain
@@ -2567,15 +2600,8 @@ async function getEvmUsdtTransactions(
         try {
 
             data =
-                await fetchJson(
-                    url,
-                    {
-                        headers: {
-                            Accept:
-                                "application/json"
-                        }
-                    },
-                    20000
+                await fetchEtherscanWithRetry(
+                    url
                 );
 
         } catch (
