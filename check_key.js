@@ -1,49 +1,29 @@
 require("dotenv").config();
 
-const key = process.env.TRON_API_KEY || "";
+const checks = [
+  ["TRON_API_KEY", process.env.TRON_API_KEY || ""],
+  ["ETHERSCAN_API_KEY", process.env.ETHERSCAN_API_KEY || process.env.ETH_API_KEY || ""],
+  ["SOLANA_RPC_URL", process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com"],
+  ["USDT_SOLANA_MINT", process.env.USDT_SOLANA_MINT || ""]
+];
 
 console.log("==========================================");
-console.log("ChainTrace TRON API Key Check");
+console.log("ChainTrace API Configuration Check");
 console.log("==========================================");
 
-console.log("Length:", key.length);
+for (const [name, value] of checks) {
+  if (!value) {
+    console.log(`${name}: MISSING`);
+    continue;
+  }
 
-if (!key) {
-    console.log("Status: MISSING");
-    console.log("Add TRON_API_KEY to backend/.env");
-    process.exit(1);
+  if (name.endsWith("_KEY")) {
+    console.log(`${name}: LOADED (length ${value.length})`);
+  } else {
+    console.log(`${name}: CONFIGURED`);
+  }
 }
 
-console.log("Status: LOADED");
-
-console.log(
-    "First 4 chars:",
-    key.slice(0, 4)
-);
-
-console.log(
-    "Last 4 chars:",
-    key.slice(-4)
-);
-
-console.log(
-    "Has double quote:",
-    key.includes('"')
-);
-
-console.log(
-    "Has single quote:",
-    key.includes("'")
-);
-
-console.log(
-    "Has leading/trailing space:",
-    key !== key.trim()
-);
-
-console.log(
-    "Raw length check:",
-    JSON.stringify(key)
-);
-
+console.log("==========================================");
+console.log("Note: API 429 errors are provider rate limits, not npm package errors.");
 console.log("==========================================");
