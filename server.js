@@ -1550,7 +1550,8 @@ async function tronGet(
 
 async function getTrc20Transactions(
     address,
-    maxPages = INDEXER_MAX_PAGES
+    maxPages = INDEXER_MAX_PAGES,
+    minTimestamp = null
 ) {
 
     const allTransactions = [];
@@ -1577,6 +1578,10 @@ async function getTrc20Transactions(
             order_by:
                 "block_timestamp,desc"
         };
+
+        if (Number.isFinite(minTimestamp) && minTimestamp > 0) {
+            params.min_timestamp = Math.floor(minTimestamp);
+        }
 
         if (fingerprint) {
             params.fingerprint =
@@ -1626,9 +1631,20 @@ async function getTrc20Transactions(
             null;
 
         if (
-            !fingerprint ||
-            pageTransactions.length < 200
+            Number.isFinite(minTimestamp) &&
+            minTimestamp > 0
         ) {
+            const pageHasRecentTransaction =
+                pageTransactions.some(tx =>
+                    Number(tx.block_timestamp || 0) >= minTimestamp
+                );
+
+            if (!pageHasRecentTransaction) {
+                break;
+            }
+        }
+
+        if (!fingerprint || pageTransactions.length < 200) {
             break;
         }
     }
@@ -1971,11 +1987,15 @@ function setCachedTransactions(
 async function scalableTronIndex(
     wallet,
     token = "USDT",
-    blockchain = "tron"
+    blockchain = "tron",
+    options = {}
 ) {
 
-    const cached =
-        getCachedTransactions(
+    const forceRefresh = Boolean(options.forceRefresh);
+
+    const cached = forceRefresh
+        ? null
+        : getCachedTransactions(
             wallet,
             token,
             blockchain
@@ -2014,7 +2034,9 @@ async function scalableTronIndex(
 
         transactions =
             await getTrc20Transactions(
-                wallet
+                wallet,
+                options.maxPages || INDEXER_MAX_PAGES,
+                options.minTimestamp || null
             );
     }
 
@@ -2042,7 +2064,8 @@ async function scalableTronIndex(
 async function scalableBlockchainIndex(
     wallet,
     token = "USDT",
-    blockchain = "tron"
+    blockchain = "tron",
+    options = {}
 ) {
 
     const network =
@@ -2057,7 +2080,8 @@ async function scalableBlockchainIndex(
         return scalableTronIndex(
             wallet,
             token,
-            network
+            network,
+            options
         );
     }
 
@@ -2101,7 +2125,8 @@ async function scalableBlockchainIndex(
         await getEvmUsdtTransactions(
             wallet,
             network,
-            INDEXER_MAX_PAGES
+            options.maxPages || INDEXER_MAX_PAGES,
+            options.minTimestamp || null
         );
 
     setCachedTransactions(
@@ -2486,7 +2511,8 @@ function summarizeTransactions(
 async function getEvmUsdtTransactions(
     address,
     blockchain,
-    maxPages = INDEXER_MAX_PAGES
+    maxPages = INDEXER_MAX_PAGES,
+    minTimestamp = null
 ) {
 
     const network =
@@ -2622,9 +2648,28 @@ async function getEvmUsdtTransactions(
             break;
         }
 
+        let reachedTimeWindow = false;
+
         for (
             const tx of rows
         ) {
+
+            const txTimestampMs =
+                Number.isFinite(Number(tx.timeStamp))
+                    ? Number(tx.timeStamp) * 1000
+                    : null;
+
+            // Etherscan returns transactions newest-first. Once the
+            // oldest row in the current page is older than the requested
+            // window, the remaining pages cannot contain newer rows.
+            if (
+                Number.isFinite(minTimestamp) &&
+                txTimestampMs !== null &&
+                txTimestampMs < minTimestamp
+            ) {
+                reachedTimeWindow = true;
+                continue;
+            }
 
             const hash =
                 tx.hash ||
@@ -2718,8 +2763,8 @@ async function getEvmUsdtTransactions(
         }
 
         if (
-            rows.length <
-            offset
+            reachedTimeWindow ||
+            rows.length < offset
         ) {
             break;
         }
@@ -4879,29 +4924,34 @@ app.post(
                 ).toUpperCase();
 
             /*
-             * TIME-BASED DEPTH
+             * TIME-BASED DEPTH — applies to every supported network
              * Depth 1 = last 1 day
              * Depth 2 = last 2 days
              * Depth 3 = last 3 days
              * Depth 4 = last 4 days
              * Depth 5 = last 7 days (days 5, 6 and 7 included)
-             * ALL     = complete indexed transaction history
+             * Depth 6 = last 30 days
+             * Depth 7 = last 90 days
+             * Depth 8 = last 270 days
+             * Depth 10 = last 365 days
+             * ALL     = complete available transaction history
              */
             const depthValue =
                 safeString(
                     req.body?.depth
                 ).toLowerCase();
 
+            const supportedDepths =
+                new Set([1, 2, 3, 4, 5, 6, 7, 8, 10]);
+
+            const numericDepth = Number(depthValue);
+
             const depth =
                 depthValue === "all"
                     ? "all"
-                    : Math.min(
-                        Math.max(
-                            Number(depthValue) || 2,
-                            1
-                        ),
-                        5
-                    );
+                    : supportedDepths.has(numericDepth)
+                        ? numericDepth
+                        : 2;
 
             if (!wallet) {
 
@@ -4975,11 +5025,26 @@ app.post(
                 });
             }
 
+            const depthDays =
+                depth === "all"
+                    ? null
+                    : ({1:1,2:2,3:3,4:4,5:7,6:30,7:90,8:270,10:365})[depth];
+
+            const requiredMinTimestamp =
+                depthDays === null
+                    ? null
+                    : Date.now() - depthDays * 24 * 60 * 60 * 1000;
+
             const indexed =
                 await scalableBlockchainIndex(
                     wallet,
                     token,
-                    blockchain
+                    blockchain,
+                    {
+                        forceRefresh: depth === "all" || Number(depth) >= 6,
+                        maxPages: depth === "all" ? Infinity : 1000,
+                        minTimestamp: requiredMinTimestamp
+                    }
                 );
 
             const normalized =
@@ -5037,9 +5102,7 @@ app.post(
                                 (24 * 60 * 60 * 1000);
 
                             const maxDays =
-                                depth === 5
-                                    ? 7
-                                    : Number(depth);
+                                ({1:1,2:2,3:3,4:4,5:7,6:30,7:90,8:270,10:365})[depth];
 
                             return (
                                 ageDays <
@@ -5204,9 +5267,7 @@ app.post(
                 depth_window:
                     depth === "all"
                         ? "ALL_AVAILABLE"
-                        : depth === 5
-                            ? "0-7_DAYS"
-                            : `0-${depth}_DAYS`,
+                        : ({1:"0-1_DAYS",2:"0-2_DAYS",3:"0-3_DAYS",4:"0-4_DAYS",5:"0-7_DAYS",6:"0-30_DAYS",7:"0-90_DAYS",8:"0-270_DAYS",10:"0-365_DAYS"})[depth],
 
                 total_indexed_transactions:
                     allTransactions.length,
