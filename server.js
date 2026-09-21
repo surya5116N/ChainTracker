@@ -4991,23 +4991,16 @@ app.post(
                     "USDT"
                 ).toUpperCase();
 
-            const depthValue =
-                safeString(
-                    req.body?.depth
-                ).toLowerCase();
-
             const depth =
-                depthValue === "all"
-                    ? "all"
-                    : Math.min(
-                        Math.max(
-                            Number(
-                                depthValue
-                            ) || 1,
-                            1
-                        ),
-                        5
-                    );
+                Math.min(
+                    Math.max(
+                        Number(
+                            req.body?.depth
+                        ) || 2,
+                        1
+                    ),
+                    5
+                );
 
             if (!wallet) {
 
@@ -5462,371 +5455,6 @@ app.post(
 
 
 /* =========================================================
-   EVIDENCE PRESERVATION API
-========================================================= */
-
-app.post(
-    "/api/evidence/preserve",
-    async (
-        req,
-        res
-    ) => {
-
-        try {
-
-            const wallet =
-                safeString(
-                    req.body?.wallet
-                );
-
-            const blockchain =
-                normalizeBlockchain(
-                    req.body?.blockchain
-                );
-
-            const token =
-                String(
-                    req.body?.token ||
-                    "USDT"
-                ).toUpperCase();
-
-            if (!wallet) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Wallet address is required."
-                });
-            }
-
-            if (
-                !isValidBlockchainAddress(
-                    wallet,
-                    blockchain
-                )
-            ) {
-                return res.status(400).json({
-                    success: false,
-                    error:
-                        `Invalid ${getBlockchainName(blockchain)} wallet address.`
-                });
-            }
-
-            const rawTransactions =
-                Array.isArray(
-                    req.body?.transactions
-                )
-                    ? req.body.transactions
-                    : [];
-
-            // Store only evidentiary fields. This keeps the payload small and
-            // avoids "request entity too large" when 2,000+ transactions exist.
-            const transactions =
-                rawTransactions.map(
-                    tx => ({
-                        hash:
-                            tx?.hash ||
-                            tx?.transaction_id ||
-                            tx?.transactionHash ||
-                            tx?.txHash ||
-                            "",
-                        from:
-                            tx?.from ||
-                            "",
-                        to:
-                            tx?.to ||
-                            "",
-                        amount:
-                            tx?.amount ??
-                            tx?.value ??
-                            0,
-                        token:
-                            tx?.token ||
-                            token,
-                        direction:
-                            tx?.direction ||
-                            tx?.type ||
-                            "Unknown",
-                        timestamp:
-                            tx?.timestamp ||
-                            tx?.timeStamp ||
-                            null,
-                        block:
-                            tx?.block ||
-                            tx?.blockNumber ||
-                            null,
-                        explorer_url:
-                            tx?.explorer_url ||
-                            tx?.explorerUrl ||
-                            ""
-                    })
-                )
-                .filter(
-                    tx =>
-                        tx.hash ||
-                        tx.from ||
-                        tx.to
-                );
-
-            const canonical =
-                JSON.stringify({
-                    wallet,
-                    blockchain,
-                    token,
-                    transactions
-                });
-
-            const evidenceHash =
-                createHash(
-                    canonical
-                );
-
-            const caseId =
-                "CT-" +
-                new Date()
-                    .toISOString()
-                    .replace(
-                        /[-:.TZ]/g,
-                        ""
-                    ) +
-                "-" +
-                evidenceHash.slice(
-                    0,
-                    8
-                ).toUpperCase();
-
-            const evidence = {
-
-                caseId,
-
-                preservedAt:
-                    new Date()
-                        .toISOString(),
-
-                wallet,
-
-                blockchain,
-
-                blockchain_name:
-                    getBlockchainName(
-                        blockchain
-                    ),
-
-                token,
-
-                transactionCount:
-                    transactions.length,
-
-                transactionHashes:
-                    transactions
-                        .map(
-                            tx =>
-                                tx.hash
-                        )
-                        .filter(Boolean),
-
-                evidenceSha256:
-                    evidenceHash,
-
-                risk:
-                    req.body?.risk ??
-                    null,
-
-                riskText:
-                    safeString(
-                        req.body?.riskText
-                    ) || null,
-
-                alerts:
-                    Array.isArray(
-                        req.body?.alerts
-                    )
-                        ? req.body.alerts
-                        : [],
-
-                fraudTypologies:
-                    Array.isArray(
-                        req.body?.fraudTypologies
-                    )
-                        ? req.body.fraudTypologies
-                        : [],
-
-                recommendations:
-                    Array.isArray(
-                        req.body?.recommendations
-                    )
-                        ? req.body.recommendations
-                        : [],
-
-                complaintCrossReference:
-                    req.body?.complaintCrossReference ??
-                    null,
-
-                vasp:
-                    req.body?.vasp ??
-                    null,
-
-                transactions
-            };
-
-            return res.json({
-                success: true,
-                evidence
-            });
-
-        } catch (error) {
-
-            console.error(
-                "EVIDENCE PRESERVATION ERROR:",
-                error
-            );
-
-            return res.status(500).json({
-                success: false,
-                error:
-                    error.message ||
-                    "Evidence preservation failed."
-            });
-        }
-    }
-);
-
-
-/* =========================================================
-   DIRECT TRANSACTION API
-========================================================= */
-
-app.post(
-    "/api/transactions",
-    async (
-        req,
-        res
-    ) => {
-
-        try {
-
-            const wallet =
-                safeString(
-                    req.body?.wallet ||
-                    req.body?.address
-                );
-
-            const blockchain =
-                normalizeBlockchain(
-                    req.body?.blockchain
-                );
-
-            const token =
-                String(
-                    req.body?.token ||
-                    "USDT"
-                ).toUpperCase();
-
-            if (!wallet) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "Wallet address is required."
-                    });
-            }
-
-            if (
-                !isValidBlockchainAddress(
-                    wallet,
-                    blockchain
-                )
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "Invalid wallet address."
-                    });
-            }
-
-            const result =
-                await scalableBlockchainIndex(
-                    wallet,
-                    token,
-                    blockchain
-                );
-
-            const transactions =
-                sortTransactions(
-                    result.transactions
-                        .map(
-                            tx =>
-                                normalizeTransaction(
-                                    tx,
-                                    wallet,
-                                    blockchain
-                                )
-                        )
-                );
-
-            res.json({
-
-                success:
-                    true,
-
-                wallet,
-
-                blockchain,
-
-                blockchain_name:
-                    getBlockchainName(
-                        blockchain
-                    ),
-
-                token,
-
-                contract:
-                    getUsdtContract(
-                        blockchain
-                    ),
-
-                source:
-                    result.source,
-
-                count:
-                    transactions.length,
-
-                transactions
-            });
-
-        } catch (
-            error
-        ) {
-
-            console.error(
-                "TRANSACTIONS ERROR:",
-                error
-            );
-
-            res
-                .status(500)
-                .json({
-
-                    success:
-                        false,
-
-                    error:
-                        error.message ||
-                        "Unable to fetch transactions."
-                });
-        }
-    }
-);
-/* =========================================================
    MULTI-HOP FUND TRACE
 ========================================================= */
 
@@ -5835,10 +5463,7 @@ async function traceWallet(
     blockchain = "tron",
     token = "USDT",
     depth = 2,
-    visited = new Set(),
-    state = {
-        addresses: new Set()
-    }
+    visited = new Set()
 ) {
 
     const network =
@@ -5847,15 +5472,13 @@ async function traceWallet(
         );
 
     const maxDepth =
-        depth === "all"
-            ? TRACE_MAX_DEPTH
-            : Math.min(
-                Math.max(
-                    Number(depth) || 1,
-                    1
-                ),
-                TRACE_MAX_DEPTH
-            );
+        Math.min(
+            Math.max(
+                Number(depth) || 2,
+                1
+            ),
+            5
+        );
 
     const walletKey =
         normalizeWallet(
@@ -5867,43 +5490,21 @@ async function traceWallet(
     ) {
 
         return {
+
             wallet,
-            blockchain: network,
+
+            blockchain:
+                network,
+
             depth: 0,
-            current_depth: visited.size,
+
             transactions: [],
+
             counterparties: [],
-            outgoingCounterparties: [],
+
             nodes: [],
-            edges: [],
-            children: []
-        };
-    }
 
-    if (
-        state.addresses.size >=
-        TRACE_MAX_ADDRESSES
-    ) {
-
-        return {
-            wallet,
-            wallet_short: shortenAddress(wallet),
-            blockchain: network,
-            blockchain_name: getBlockchainName(network),
-            token,
-            depth: maxDepth,
-            current_depth: visited.size,
-            source: "TRACE_LIMIT",
-            transactions: [],
-            transaction_count: 0,
-            counterparties: [],
-            outgoingCounterparties: [],
-            graph: {
-                nodes: [],
-                edges: []
-            },
-            children: [],
-            limit_reached: true
+            edges: []
         };
     }
 
@@ -5913,10 +5514,6 @@ async function traceWallet(
         );
 
     nextVisited.add(
-        walletKey
-    );
-
-    state.addresses.add(
         walletKey
     );
 
@@ -5945,34 +5542,11 @@ async function traceWallet(
             transactions
         );
 
-    // IMPORTANT: recursion follows only outgoing transfers.
-    // Incoming counterparties must never become downstream trace hops.
-    const outgoingCounterparties = Array.from(
-        new Map(
-            transactions
-                .filter(
-                    tx =>
-                        tx.direction === "Sent" &&
-                        tx.to &&
-                        normalizeWallet(tx.to) !== walletKey
-                )
-                .map(
-                    tx => [
-                        normalizeWallet(tx.to),
-                        tx.to
-                    ]
-                )
-        ).values()
-    );
-
     const graph =
         buildFundFlowGraph(
             transactions,
             wallet
         );
-
-    const currentDepth =
-        visited.size;
 
     const result = {
 
@@ -5997,7 +5571,7 @@ async function traceWallet(
             maxDepth,
 
         current_depth:
-            currentDepth,
+            visited.size,
 
         source:
             indexed.source,
@@ -6009,35 +5583,34 @@ async function traceWallet(
 
         counterparties,
 
-        outgoingCounterparties,
-
         graph,
 
-        children: [],
-
-        limit_reached:
-            false
+        children: []
     };
 
-    // Root = depth 1. Child wallets are depth 2, etc.
     if (
-        currentDepth >=
-        maxDepth - 1
+        maxDepth <=
+        visited.size
     ) {
+
         return result;
     }
 
-    for (
-        const nextAddress of outgoingCounterparties
-    ) {
+    /*
+     * Limit branching so that a large wallet
+     * cannot create an uncontrolled recursive
+     * request tree.
+     */
 
-        if (
-            state.addresses.size >=
-            TRACE_MAX_ADDRESSES
-        ) {
-            result.limit_reached = true;
-            break;
-        }
+    const nextAddresses =
+        counterparties.slice(
+            0,
+            10
+        );
+
+    for (
+        const nextAddress of nextAddresses
+    ) {
 
         const nextKey =
             normalizeWallet(
@@ -6060,8 +5633,7 @@ async function traceWallet(
                     network,
                     token,
                     maxDepth,
-                    nextVisited,
-                    state
+                    nextVisited
                 );
 
             result.children.push(
@@ -6087,71 +5659,6 @@ async function traceWallet(
     }
 
     return result;
-}
-
-
-/* =========================================================
-   FLATTEN TRACE TRANSACTIONS
-========================================================= */
-
-function flattenTraceTransactions(
-    trace,
-    output = [],
-    visited = new Set()
-) {
-    if (
-        !trace ||
-        !trace.wallet
-    ) {
-        return output;
-    }
-
-    const walletKey =
-        normalizeWallet(
-            trace.wallet
-        );
-
-    if (
-        visited.has(
-            walletKey
-        )
-    ) {
-        return output;
-    }
-
-    visited.add(
-        walletKey
-    );
-
-    for (
-        const tx of
-        trace.transactions ||
-        []
-    ) {
-        output.push({
-            ...tx,
-            trace_level:
-                trace.current_depth ||
-                trace.depth ||
-                1,
-            traced_wallet:
-                trace.wallet
-        });
-    }
-
-    for (
-        const child of
-        trace.children ||
-        []
-    ) {
-        flattenTraceTransactions(
-            child,
-            output,
-            visited
-        );
-    }
-
-    return output;
 }
 
 
@@ -6401,23 +5908,16 @@ app.post(
                     "USDT"
                 ).toUpperCase();
 
-            const depthValue =
-                safeString(
-                    req.body?.depth
-                ).toLowerCase();
-
             const depth =
-                depthValue === "all"
-                    ? "all"
-                    : Math.min(
-                        Math.max(
-                            Number(
-                                depthValue
-                            ) || 1,
-                            1
-                        ),
-                        5
-                    );
+                Math.min(
+                    Math.max(
+                        Number(
+                            req.body?.depth
+                        ) || 2,
+                        1
+                    ),
+                    5
+                );
 
             if (!wallet) {
 
