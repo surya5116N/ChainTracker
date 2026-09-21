@@ -1829,8 +1829,8 @@
                     BNB Chain / BEP-20
                 </option>
 
-                <option value="solana-usdt">
-                    Solana / SPL USDT
+                <option value="solana-usdt" disabled>
+                    Solana / SPL USDT (Coming Soon)
                 </option>
 
                 <option value="tron-usdt">
@@ -1857,13 +1857,14 @@
                     Depth 4
                 </option>
 
-                <option value="5">
-                    Depth 5
-                </option>
+                <option value="5">Depth 5 — 7 Days</option>
 
-                <option value="ALL">
-                    ALL
-                </option>
+                <option value="6">Depth 6 — 1 Month</option>
+                <option value="7">Depth 7 — 3 Months</option>
+                <option value="8">Depth 8 — 9 Months</option>
+                <option value="10">Depth 10 — 12 Months</option>
+
+                <option value="ALL">ALL — Full Transaction History</option>
             </select>
 
             <button
@@ -2804,7 +2805,7 @@ function updateInvestigationNetworkLabel() {
         "tron-usdt": "TRON / TRC-20",
         "ethereum-usdt": "Ethereum / ERC-20",
         "bnb-usdt": "BNB Chain / BEP-20",
-        "solana-usdt": "Solana / SPL USDT"
+        "solana-usdt": "Solana / SPL USDT (Coming Soon)"
     };
 
     const placeholders = {
@@ -2886,10 +2887,13 @@ async function analyzeWallet() {
         token = "USDT";
     }
 
+    const depthValue =
+        String(depthInput?.value || "1").trim().toUpperCase();
+
     const depth =
-        Number(
-            depthInput.value
-        ) || 1;
+        depthValue === "ALL"
+            ? "all"
+            : Number(depthValue) || 1;
 
     if (!wallet) {
         alert(
@@ -2936,14 +2940,17 @@ async function analyzeWallet() {
     status.className =
         "status";
 
-    status.innerText =
-        `Analyzing ${blockchain === "tron"
-            ? "TRON"
+    const networkLabel =
+        blockchain === "tron"
+            ? "TRON / TRC-20"
             : blockchain === "ethereum"
-                ? "Ethereum"
+                ? "Ethereum / ERC-20"
                 : blockchain === "bnb"
-                    ? "BNB Chain"
-                    : "Solana"} wallet — ${token} — depth ${depth}...`;
+                    ? "BNB Chain / BEP-20"
+                    : "Solana / SPL";
+
+    status.innerText =
+        `Analyzing ${networkLabel} wallet — ${token} — depth ${depth}...`;
 
     button.disabled =
         true;
@@ -4354,8 +4361,15 @@ async function traceTransactionWallet(wallet) {
         document.getElementById("blockchainInput")?.value?.split("-")[0] ||
         "tron";
     const token = latestAnalysis?.token || "USDT";
+    const depthValue =
+        String(document.getElementById("depthInput")?.value || "2")
+            .trim()
+            .toUpperCase();
+
     const depth =
-        Number(document.getElementById("depthInput")?.value) || 2;
+        depthValue === "ALL"
+            ? "all"
+            : Number(depthValue) || 2;
 
     const status = document.getElementById("status");
 
