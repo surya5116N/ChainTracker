@@ -2483,6 +2483,7 @@ let realtimeTimer = null;
 
 let watchedWallet = null;
 let liveTrackStartedAt = null;
+let liveTrackEndAt = null;
 let liveTrackCountdownTimer = null;
 let liveTrackTimer = null;
 let liveTrackLastFutureHashes = new Set();
@@ -5118,47 +5119,28 @@ function updateLiveTrackCountdown(serverRemainingMs = null) {
     const el = document.getElementById("liveTimeRemaining");
     if (!el) return;
 
-    let remaining;
-
+    // Keep one absolute end-time in the browser so the display changes every second.
     if (Number.isFinite(Number(serverRemainingMs))) {
-        remaining = Math.max(0, Number(serverRemainingMs));
-        liveTrackStartedAt =
-            Date.now() + remaining - (24 * 60 * 60 * 1000);
-    } else if (liveTrackStartedAt) {
-        const end =
-            liveTrackStartedAt +
-            24 * 60 * 60 * 1000;
-        remaining =
-            Math.max(0, end - Date.now());
-    } else {
-        return;
+        liveTrackEndAt = Date.now() + Math.max(0, Number(serverRemainingMs));
+    } else if (!liveTrackEndAt && liveTrackStartedAt) {
+        liveTrackEndAt = liveTrackStartedAt + 24 * 60 * 60 * 1000;
     }
 
-    const h =
-        Math.floor(
-            remaining / 3600000
-        );
+    if (!liveTrackEndAt) return;
 
-    const m =
-        Math.floor(
-            (remaining % 3600000) / 60000
-        );
+    const remaining = Math.max(0, liveTrackEndAt - Date.now());
+    const h = Math.floor(remaining / 3600000);
+    const m = Math.floor((remaining % 3600000) / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
 
-    const s =
-        Math.floor(
-            (remaining % 60000) / 1000
-        );
-
-    el.innerText =
+    el.textContent =
         `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 
     if (remaining <= 0) {
         clearInterval(liveTrackCountdownTimer);
         liveTrackCountdownTimer = null;
-
-        if (liveTrackStartedAt) {
-            stopLiveTrack(true);
-        }
+        liveTrackEndAt = null;
+        stopLiveTrack(true);
     }
 }
 
@@ -5232,17 +5214,13 @@ async function pollLiveTrack() {
                     ? new Date(data.trackingStartedAt).getTime()
                     : liveTrackStartedAt;
 
-            updateLiveTrackCountdown(
-                data.timeRemainingMs
-            );
+            updateLiveTrackCountdown(data.timeRemainingMs);
 
             const badge = document.getElementById("liveTrackBadge");
             if (badge) {
                 badge.innerText = "LIVE";
                 badge.className = "badge risk-low";
             }
-
-            updateLiveTrackCountdown();
         }
     } catch (error) {
         setLiveTrackStatus(error.message || "Live Track unavailable.", "error");
@@ -5281,6 +5259,8 @@ async function startLiveTrack() {
             data.trackingStartedAt
                 ? new Date(data.trackingStartedAt).getTime()
                 : Date.now();
+
+        liveTrackEndAt = liveTrackStartedAt + (24 * 60 * 60 * 1000);
 
         const badge = document.getElementById("liveTrackBadge");
         if (badge) {
@@ -5321,6 +5301,8 @@ async function stopLiveTrack(autoStopped = false) {
 
     clearInterval(liveTrackCountdownTimer);
     liveTrackCountdownTimer = null;
+    liveTrackEndAt = null;
+    liveTrackStartedAt = null;
 
     if (wallet) {
         try {
