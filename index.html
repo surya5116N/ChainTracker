@@ -1754,6 +1754,18 @@
             display:block;
         }
 
+
+<style>
+.transaction-clickable {
+    cursor: pointer;
+}
+.transaction-clickable:hover {
+    background: rgba(36, 154, 230, 0.08);
+}
+.transaction-clickable td {
+    transition: background 0.15s ease;
+}
+</style>
 </style>
 
 </head>
@@ -2856,15 +2868,51 @@ async function fetchJson(url, options = {}) {
 ========================================================= */
 
 function isValidTronAddress(wallet) {
-    return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(wallet);
+    return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(String(wallet || "").trim());
 }
 
 function isValidEvmAddress(wallet) {
-    return /^0x[a-fA-F0-9]{40}$/.test(wallet);
+    return /^0x[a-fA-F0-9]{40}$/.test(String(wallet || "").trim());
 }
 
 function isValidSolanaAddress(wallet) {
-    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet);
+    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(wallet || "").trim());
+}
+
+function getWalletValidationMessage(wallet, blockchain) {
+    const value = String(wallet || "").trim();
+    const length = value.length;
+
+    if (blockchain === "tron") {
+        if (length !== 34) {
+            return `❌ Invalid TRON address. You entered ${length} character${length === 1 ? "" : "s"}. A TRON address must be exactly 34 characters and start with T.`;
+        }
+
+        return "❌ Invalid TRON address. Check the characters and try again.";
+    }
+
+    if (blockchain === "ethereum" || blockchain === "bnb") {
+        const name =
+            blockchain === "ethereum"
+                ? "Ethereum"
+                : "BNB Chain";
+
+        if (length !== 42) {
+            return `❌ Invalid ${name} address. You entered ${length} character${length === 1 ? "" : "s"}. An EVM address must be exactly 42 characters (0x + 40 hexadecimal characters).`;
+        }
+
+        return `❌ Invalid ${name} address. Check the 0x address and try again.`;
+    }
+
+    if (blockchain === "solana") {
+        if (length < 32 || length > 44) {
+            return `❌ Invalid Solana address. You entered ${length} character${length === 1 ? "" : "s"}. Solana addresses are normally 32–44 characters.`;
+        }
+
+        return "❌ Invalid Solana address. Check the characters and try again.";
+    }
+
+    return `❌ Invalid wallet address. You entered ${length} characters.`;
 }
 
 function updateTokenUI(token) {
@@ -2987,15 +3035,14 @@ async function analyzeWallet() {
     const depth = depthValue === "all" ? "all" : (Number(depthValue) || 1);
 
     if (!wallet) {
-        alert(
-            `Please enter a ${blockchain === "tron"
-                ? "TRON"
-                : blockchain === "ethereum"
-                    ? "Ethereum"
-                    : blockchain === "bnb"
-                        ? "BNB Chain"
-                        : "Solana"} wallet address.`
-        );
+        status.className = "status error";
+        status.innerText = `❌ Please enter a ${blockchain === "tron"
+            ? "TRON"
+            : blockchain === "ethereum"
+                ? "Ethereum"
+                : blockchain === "bnb"
+                    ? "BNB Chain"
+                    : "Solana"} wallet address.`;
         walletInput.focus();
         return;
     }
@@ -3004,7 +3051,7 @@ async function analyzeWallet() {
 
         if (!isValidTronAddress(wallet)) {
             status.className = "status error";
-            status.innerText = "❌ Wrong address / Does not match selected blockchain: TRON.";
+            status.innerText = getWalletValidationMessage(wallet, "tron");
             walletInput.focus();
             return;
         }
@@ -3013,7 +3060,7 @@ async function analyzeWallet() {
 
         if (!isValidSolanaAddress(wallet)) {
             status.className = "status error";
-            status.innerText = "❌ Wrong address / Does not match selected blockchain: Solana.";
+            status.innerText = getWalletValidationMessage(wallet, "solana");
             walletInput.focus();
             return;
         }
@@ -3022,7 +3069,7 @@ async function analyzeWallet() {
 
         if (!isValidEvmAddress(wallet)) {
             status.className = "status error";
-            status.innerText = `❌ Wrong address / Does not match selected blockchain: ${blockchain === "ethereum" ? "Ethereum" : "BNB Chain"}.`;
+            status.innerText = getWalletValidationMessage(wallet, blockchain);
             walletInput.focus();
             return;
         }
@@ -3081,7 +3128,10 @@ async function analyzeWallet() {
         );
 
         updateVasp(
-            data.vasp
+            data.vasp,
+            data.vaspMatches ||
+                data.vasp_attribution ||
+                []
         );
 
         updateComplaint(
@@ -3130,14 +3180,27 @@ async function analyzeWallet() {
         status.className =
             "status success";
 
+        const totalFound =
+            data.transactionStats
+                ?.totalTransactions ??
+            data.transactions
+                ?.length ??
+            0;
+
+        const requestedDepth =
+            String(
+                data.traceDepthRequested ??
+                depth
+            ).toUpperCase();
+
+        const reachedDepth =
+            Number(
+                data.traceDepthReached ??
+                1
+            );
+
         status.innerText =
-            `Analysis completed — ${
-                data.transactionStats
-                    ?.totalTransactions ??
-                data.transactions
-                    ?.length ??
-                0
-            } transactions found.`;
+            `Analysis completed — ${totalFound.toLocaleString()} transactions found — requested Depth ${requestedDepth}, reached Depth ${reachedDepth}.`;
 
     } catch (error) {
 
@@ -3386,38 +3449,78 @@ function updateOverview(
 ========================================================= */
 
 function updateVasp(
-    vasp
+    vasp,
+    vaspMatches = []
 ) {
+
+    const match =
+        vasp ||
+        (Array.isArray(vaspMatches) && vaspMatches.length
+            ? vaspMatches[0]
+            : null);
+
+    const name =
+        match?.name ||
+        match?.vasp ||
+        match?.vasp_name ||
+        match?.exchange ||
+        match?.platform ||
+        "No VASP Identified";
+
+    const type =
+        match?.type ||
+        match?.category ||
+        "Unknown";
+
+    const verified =
+        Boolean(
+            match?.verified
+        ) ||
+        String(
+            match?.status || ""
+        ).toUpperCase() === "VERIFIED";
+
+    const confidence =
+        match?.confidence ||
+        (match
+            ? "Database match"
+            : "Unknown");
+
+    const address =
+        match?.address ||
+        "";
+
+    const source =
+        match?.source ||
+        "Local VASP Database";
 
     setText(
         "vaspName",
-        vasp?.name ||
-            "No VASP Identified"
+        name
     );
 
     setText(
         "vaspType",
-        vasp?.type ||
-            "Unknown"
+        type
     );
 
     setText(
         "vaspConfidence",
-        vasp?.confidence ||
-            "Unknown"
+        confidence
     );
 
     setText(
         "vaspVerified",
-        vasp?.verified
+        verified
             ? "VERIFIED"
             : "NOT VERIFIED"
     );
 
     setText(
         "vaspNote",
-        vasp?.note ||
-            "No verified VASP attribution available."
+        match
+            ? `Matched ${address || "counterparty"} using ${source}.`
+            : "No verified VASP attribution available."
     );
 
 }
@@ -4385,6 +4488,131 @@ function renderTransactionRows(transactions) {
 
     visibleTransactions.forEach(tx => {
         const row = document.createElement("tr");
+
+        row.classList.add(
+            "transaction-clickable"
+        );
+
+        row.title =
+            "Click this transaction to investigate its counterparty with ALL depth.";
+
+        row.addEventListener(
+            "click",
+            event => {
+                // Keep explorer links working normally.
+                if (
+                    event.target.closest("a")
+                ) {
+                    return;
+                }
+
+                const rootWallet =
+                    String(
+                        latestAnalysis?.wallet ||
+                        ""
+                    ).trim();
+
+                const from =
+                    String(
+                        tx?.from ||
+                        ""
+                    ).trim();
+
+                const to =
+                    String(
+                        tx?.to ||
+                        ""
+                    ).trim();
+
+                const rootLower =
+                    rootWallet.toLowerCase();
+
+                let counterparty =
+                    "";
+
+                if (
+                    from &&
+                    from.toLowerCase() === rootLower
+                ) {
+                    counterparty = to;
+                } else if (
+                    to &&
+                    to.toLowerCase() === rootLower
+                ) {
+                    counterparty = from;
+                } else {
+                    counterparty =
+                        from ||
+                        to;
+                }
+
+                if (!counterparty) {
+                    const status =
+                        document.getElementById("status");
+
+                    if (status) {
+                        status.className =
+                            "status error";
+                        status.innerText =
+                            "❌ No wallet counterparty is available for this transaction.";
+                    }
+
+                    return;
+                }
+
+                const walletField =
+                    document.getElementById(
+                        "walletInput"
+                    );
+
+                const networkField =
+                    document.getElementById(
+                        "blockchainInput"
+                    );
+
+                const depthField =
+                    document.getElementById(
+                        "depthInput"
+                    );
+
+                if (networkField) {
+                    // Transaction investigation requested by the project
+                    // is automatically routed to TRON/TRC-20.
+                    networkField.value =
+                        "tron-usdt";
+
+                    networkField.dispatchEvent(
+                        new Event(
+                            "change"
+                        )
+                    );
+                }
+
+                if (depthField) {
+                    depthField.value =
+                        "ALL";
+                }
+
+                if (walletField) {
+                    walletField.value =
+                        counterparty;
+
+                    walletField.scrollIntoView({
+                        behavior:
+                            "smooth",
+                        block:
+                            "center"
+                    });
+
+                    setTimeout(
+                        () => {
+                            analyzeWallet();
+                        },
+                        250
+                    );
+                }
+            }
+        );
 
         row.innerHTML = `
             <td class="${
@@ -5473,7 +5701,45 @@ async function preserveEvidence() {
                                 latestAnalysis.token,
 
                             transactions:
-                                latestAnalysis.transactions,
+                                (Array.isArray(latestAnalysis.transactions)
+                                    ? latestAnalysis.transactions
+                                        .map(tx => ({
+                                            hash:
+                                                tx?.hash ||
+                                                tx?.transaction_id ||
+                                                tx?.transactionHash ||
+                                                "",
+                                            from:
+                                                tx?.from ||
+                                                "",
+                                            to:
+                                                tx?.to ||
+                                                "",
+                                            amount:
+                                                tx?.amount ??
+                                                tx?.value ??
+                                                0,
+                                            token:
+                                                tx?.token ||
+                                                latestAnalysis.token ||
+                                                "USDT",
+                                            direction:
+                                                tx?.direction ||
+                                                tx?.type ||
+                                                "Unknown",
+                                            timestamp:
+                                                tx?.timestamp ||
+                                                null,
+                                            block:
+                                                tx?.block ||
+                                                tx?.blockNumber ||
+                                                null,
+                                            explorer_url:
+                                                tx?.explorer_url ||
+                                                tx?.explorerUrl ||
+                                                ""
+                                        }))
+                                    : []),
 
                             risk:
                                 latestAnalysis.risk,
