@@ -256,6 +256,8 @@ const realtimeWatchers =
 const realtimeAlerts =
     [];
 
+const preservedEvidence = new Map();
+
 
 /* =========================================================
    GENERIC HELPERS
@@ -5995,81 +5997,125 @@ async function checkRealtimeWatcher(
                     )
             );
 
-        const newTransactions =
-            [];
+        const now =
+            Date.now();
 
-        for (
-            const tx of normalized
-        ) {
+        const trackingStart =
+            new Date(
+                watcher.trackingStartedAt
+            ).getTime();
 
-            if (
-                !tx.hash
-            ) {
-                continue;
-            }
+        const pastCutoff =
+            now -
+            24 * 60 * 60 * 1000;
 
-            if (
-                watcher.seenHashes.has(
-                    tx.hash
-                )
-            ) {
-                continue;
-            }
-
-            watcher.seenHashes.add(
-                tx.hash
+        const past =
+            normalized.filter(
+                tx => {
+                    const t = Number(
+                        tx.timestampMs ||
+                        tx.block_timestamp ||
+                        tx.timestamp ||
+                        0
+                    );
+                    return t >= pastCutoff && t < trackingStart;
+                }
             );
 
-            /*
-             * Do not alert for the first historical
-             * batch when the watcher is initialized.
-             */
+        watcher.past24hTransactions =
+            past.slice(
+                0,
+                2000
+            );
 
-            if (
-                watcher.initialized
-            ) {
+        const newTransactions = [];
 
-                newTransactions.push(
-                    tx
+        for (const tx of normalized) {
+
+            if (!tx.hash) continue;
+
+            const txTime =
+                Number(
+                    tx.timestampMs ||
+                    tx.block_timestamp ||
+                    tx.timestamp ||
+                    0
                 );
+
+            if (!watcher.seenHashes.has(tx.hash)) {
+
+                watcher.seenHashes.add(tx.hash);
+
+                if (
+                    watcher.initialized &&
+                    txTime >= trackingStart &&
+                    txTime <= now
+                ) {
+                    newTransactions.push(tx);
+                }
             }
         }
 
-        if (
-            !watcher.initialized
-        ) {
-
-            watcher.initialized =
-                true;
-
-            watcher.lastCheck =
-                new Date().toISOString();
-
-            return {
-
-                newTransactions:
-                    [],
-
-                alerts:
-                    []
-            };
+        if (!watcher.initialized) {
+            watcher.initialized = true;
         }
 
-        const alerts =
-            [];
+        const existingFuture =
+            Array.isArray(
+                watcher.future24hTransactions
+            )
+                ? watcher.future24hTransactions
+                : [];
 
-        for (
-            const tx of newTransactions
-        ) {
+        const futureMap =
+            new Map();
 
-            const alert =
+        for (const tx of existingFuture) {
+            if (tx?.hash) {
+                futureMap.set(tx.hash, tx);
+            }
+        }
+
+        for (const tx of newTransactions) {
+            if (tx?.hash) {
+                futureMap.set(tx.hash, tx);
+            }
+        }
+
+        watcher.future24hTransactions =
+            Array.from(
+                futureMap.values()
+            )
+            .filter(
+                tx => {
+                    const t = Number(
+                        tx.timestampMs ||
+                        tx.block_timestamp ||
+                        tx.timestamp ||
+                        0
+                    );
+                    return t >= trackingStart &&
+                        t <= trackingStart + 24 * 60 * 60 * 1000;
+                }
+            )
+            .sort(
+                (a,b) =>
+                    Number(b.timestampMs || b.block_timestamp || b.timestamp || 0) -
+                    Number(a.timestampMs || a.block_timestamp || a.timestamp || 0)
+            )
+            .slice(
+                0,
+                2000
+            );
+
+        const alerts = [];
+
+        for (const tx of newTransactions) {
+            alerts.push(
                 createRealtimeAlert(
                     watcher,
                     tx
-                );
-
-            alerts.push(
-                alert
+                )
             );
         }
 
@@ -6083,15 +6129,11 @@ async function checkRealtimeWatcher(
             null;
 
         return {
-
             newTransactions,
-
             alerts
         };
 
-    } catch (
-        error
-    ) {
+    } catch (error) {
 
         watcher.lastError =
             error.message;
@@ -6106,18 +6148,122 @@ async function checkRealtimeWatcher(
         );
 
         return {
-
-            newTransactions:
-                [],
-
-            alerts:
-                [],
-
-            error:
-                error.message
+            newTransactions: [],
+            alerts: [],
+            error: error.message
         };
     }
 }
+
+
+
+/* =========================================================
+   EVIDENCE PRESERVATION
+========================================================= */
+
+app.post(
+    "/api/evidence/preserve",
+    (
+        req,
+        res
+    ) => {
+
+        try {
+
+            const wallet =
+                safeString(
+                    req.body?.wallet
+                );
+
+            if (!wallet) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Wallet address is required."
+                });
+            }
+
+            const evidencePayload = {
+                wallet,
+                blockchain:
+                    safeString(req.body?.blockchain) || "tron",
+                token:
+                    safeString(req.body?.token) || "USDT",
+                transactions:
+                    Array.isArray(req.body?.transactions)
+                        ? req.body.transactions
+                        : [],
+                risk:
+                    req.body?.risk || null,
+                riskText:
+                    req.body?.riskText || "",
+                alerts:
+                    Array.isArray(req.body?.alerts)
+                        ? req.body.alerts
+                        : [],
+                fraudTypologies:
+                    Array.isArray(req.body?.fraudTypologies)
+                        ? req.body.fraudTypologies
+                        : [],
+                recommendations:
+                    Array.isArray(req.body?.recommendations)
+                        ? req.body.recommendations
+                        : [],
+                complaintCrossReference:
+                    req.body?.complaintCrossReference || null,
+                vasp:
+                    req.body?.vasp || null
+            };
+
+            const caseId =
+                "CT-" +
+                Date.now().toString(36).toUpperCase() +
+                "-" +
+                crypto.randomBytes(4).toString("hex").toUpperCase();
+
+            const evidence = {
+                caseId,
+                wallet: evidencePayload.wallet,
+                blockchain: evidencePayload.blockchain,
+                token: evidencePayload.token,
+                preservedAt: new Date().toISOString(),
+                transactionCount:
+                    evidencePayload.transactions.length,
+                integrityHash:
+                    createHash(
+                        JSON.stringify(
+                            evidencePayload
+                        )
+                    ),
+                evidence:
+                    evidencePayload
+            };
+
+            preservedEvidence.set(
+                caseId,
+                evidence
+            );
+
+            return res.json({
+                success: true,
+                evidence
+            });
+
+        } catch (error) {
+
+            console.error(
+                "EVIDENCE PRESERVATION ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                error:
+                    error.message ||
+                    "Evidence preservation failed."
+            });
+        }
+    }
+);
 
 
 /* =========================================================
@@ -6213,6 +6359,24 @@ app.post(
                     createdAt:
                         new Date().toISOString(),
 
+                    trackingStartedAt:
+                        new Date().toISOString(),
+
+                    windowHours:
+                        Math.min(
+                            Math.max(
+                                Number(req.body?.windowHours) || 24,
+                                1
+                            ),
+                            24
+                        ),
+
+                    past24hTransactions:
+                        [],
+
+                    future24hTransactions:
+                        [],
+
                     lastCheck:
                         null,
 
@@ -6248,6 +6412,30 @@ app.post(
                 watcher.active =
                     true;
 
+                watcher.trackingStartedAt =
+                    new Date().toISOString();
+
+                watcher.windowHours =
+                    Math.min(
+                        Math.max(
+                            Number(req.body?.windowHours) || 24,
+                            1
+                        ),
+                        24
+                    );
+
+                watcher.past24hTransactions =
+                    [];
+
+                watcher.future24hTransactions =
+                    [];
+
+                watcher.seenHashes =
+                    new Set();
+
+                watcher.initialized =
+                    false;
+
                 watcher.lastError =
                     null;
             }
@@ -6277,6 +6465,12 @@ app.post(
 
                 watcherCount:
                     realtimeWatchers.size,
+
+                trackingStartedAt:
+                    watcher.trackingStartedAt,
+
+                windowHours:
+                    watcher.windowHours,
 
                 message:
                     "Real-time wallet monitoring started."
@@ -6466,6 +6660,18 @@ app.get(
                 transactionCount:
                     watcher.lastTransactionCount,
 
+                trackingStartedAt:
+                    watcher.trackingStartedAt,
+
+                windowHours:
+                    watcher.windowHours,
+
+                past24hCount:
+                    watcher.past24hTransactions?.length || 0,
+
+                future24hCount:
+                    watcher.future24hTransactions?.length || 0,
+
                 watcherCount:
                     realtimeWatchers.size
             });
@@ -6496,6 +6702,99 @@ app.get(
                 0
                     ? "Real-time monitoring is active."
                     : "Real-time monitoring is inactive."
+        });
+    }
+);
+
+
+/* =========================================================
+   REALTIME 24-HOUR DATA
+========================================================= */
+
+app.get(
+    "/api/realtime/24h",
+    (
+        req,
+        res
+    ) => {
+
+        const wallet =
+            safeString(
+                req.query?.wallet
+            );
+
+        if (!wallet) {
+            return res.status(400).json({
+                success: false,
+                error: "Wallet address is required."
+            });
+        }
+
+        const watcher =
+            realtimeWatchers.get(
+                normalizeWallet(wallet)
+            );
+
+        if (!watcher) {
+            return res.json({
+                success: true,
+                watching: false,
+                wallet,
+                past24hTransactions: [],
+                future24hTransactions: [],
+                past24hCount: 0,
+                future24hCount: 0,
+                trackingStartedAt: null,
+                windowHours: 24
+            });
+        }
+
+        const start =
+            new Date(
+                watcher.trackingStartedAt
+            ).getTime();
+
+        const now =
+            Date.now();
+
+        const expired =
+            now >=
+            start + 24 * 60 * 60 * 1000;
+
+        if (expired) {
+            watcher.active = false;
+        }
+
+        return res.json({
+            success: true,
+            watching: watcher.active,
+            wallet: watcher.wallet,
+            blockchain: watcher.blockchain,
+            blockchain_name:
+                getBlockchainName(
+                    watcher.blockchain
+                ),
+            token: watcher.token,
+            trackingStartedAt:
+                watcher.trackingStartedAt,
+            windowHours: 24,
+            timeRemainingMs:
+                Math.max(
+                    0,
+                    start + 24 * 60 * 60 * 1000 - now
+                ),
+            past24hTransactions:
+                watcher.past24hTransactions || [],
+            future24hTransactions:
+                watcher.future24hTransactions || [],
+            past24hCount:
+                watcher.past24hTransactions?.length || 0,
+            future24hCount:
+                watcher.future24hTransactions?.length || 0,
+            lastCheck:
+                watcher.lastCheck,
+            lastError:
+                watcher.lastError
         });
     }
 );
@@ -6698,7 +6997,11 @@ app.get(
 
                 "POST /api/trace",
 
+                "POST /api/evidence/preserve",
+
                 "POST /api/realtime/watch",
+
+                "GET /api/realtime/24h",
 
                 "POST /api/realtime/unwatch",
 
