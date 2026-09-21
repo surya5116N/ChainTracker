@@ -5119,22 +5119,37 @@ function updateLiveTrackCountdown(serverRemainingMs = null) {
     const el = document.getElementById("liveTimeRemaining");
     if (!el) return;
 
-    // Keep one absolute end-time in the browser so the display changes every second.
-    if (Number.isFinite(Number(serverRemainingMs))) {
-        liveTrackEndAt = Date.now() + Math.max(0, Number(serverRemainingMs));
-    } else if (!liveTrackEndAt && liveTrackStartedAt) {
-        liveTrackEndAt = liveTrackStartedAt + 24 * 60 * 60 * 1000;
+    /*
+     * IMPORTANT:
+     * Do NOT reset liveTrackEndAt on every 15-second API poll.
+     * If we keep doing that, the countdown can appear stuck at 23:59:59.
+     * The browser keeps one fixed end timestamp and only the countdown
+     * display is updated every second.
+     */
+    if (!liveTrackEndAt && liveTrackStartedAt) {
+        liveTrackEndAt = liveTrackStartedAt + (24 * 60 * 60 * 1000);
     }
 
-    if (!liveTrackEndAt) return;
+    if (!liveTrackEndAt && Number.isFinite(Number(serverRemainingMs))) {
+        liveTrackEndAt = Date.now() + Math.max(0, Number(serverRemainingMs));
+    }
+
+    if (!liveTrackEndAt) {
+        el.textContent = "00:00:00";
+        return;
+    }
 
     const remaining = Math.max(0, liveTrackEndAt - Date.now());
-    const h = Math.floor(remaining / 3600000);
-    const m = Math.floor((remaining % 3600000) / 60000);
-    const s = Math.floor((remaining % 60000) / 1000);
+    const totalSeconds = Math.ceil(remaining / 1000);
+
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
 
     el.textContent =
-        `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+        `${String(h).padStart(2, "0")}:` +
+        `${String(m).padStart(2, "0")}:` +
+        `${String(s).padStart(2, "0")}`;
 
     if (remaining <= 0) {
         clearInterval(liveTrackCountdownTimer);
@@ -5142,6 +5157,18 @@ function updateLiveTrackCountdown(serverRemainingMs = null) {
         liveTrackEndAt = null;
         stopLiveTrack(true);
     }
+}
+
+function startLiveTrackCountdown() {
+    clearInterval(liveTrackCountdownTimer);
+
+    // Paint immediately.
+    updateLiveTrackCountdown();
+
+    // Then update exactly once every second.
+    liveTrackCountdownTimer = setInterval(() => {
+        updateLiveTrackCountdown();
+    }, 1000);
 }
 
 function renderLiveTrackTransactions(data) {
@@ -5214,7 +5241,12 @@ async function pollLiveTrack() {
                     ? new Date(data.trackingStartedAt).getTime()
                     : liveTrackStartedAt;
 
-            updateLiveTrackCountdown(data.timeRemainingMs);
+            // Keep the browser countdown authoritative.
+            // Do not reset the end timestamp on every polling request.
+            if (!liveTrackEndAt && Number.isFinite(Number(data.timeRemainingMs))) {
+                liveTrackEndAt = Date.now() + Math.max(0, Number(data.timeRemainingMs));
+            }
+            updateLiveTrackCountdown();
 
             const badge = document.getElementById("liveTrackBadge");
             if (badge) {
@@ -5279,13 +5311,7 @@ async function startLiveTrack() {
             15000
         );
 
-        clearInterval(liveTrackCountdownTimer);
-        liveTrackCountdownTimer = setInterval(
-            updateLiveTrackCountdown,
-            1000
-        );
-
-        updateLiveTrackCountdown();
+        startLiveTrackCountdown();
 
         await pollLiveTrack();
     } catch (error) {
