@@ -1,0 +1,5864 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>ChainTrace </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                #071016;
+
+            color:
+                #e7f1f5;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1450px;
+            margin: 25px auto;
+        }
+
+        .header {
+            padding: 22px;
+            border:
+                1px solid #18313d;
+
+            border-radius: 12px;
+
+            background:
+                #0b171e;
+
+            margin-bottom: 18px;
+        }
+
+        .header h1 {
+            margin:
+                0 0 7px;
+
+            color:
+                #62b9ff;
+
+            letter-spacing:
+                1px;
+        }
+
+        .header p {
+            margin: 0;
+
+            color:
+                #8297a3;
+
+            font-size:
+                13px;
+        }
+
+        .header-status {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+
+        .panel {
+            background:
+                #0b171e;
+
+            border:
+                1px solid #18313d;
+
+            border-radius:
+                12px;
+
+            padding:
+                18px;
+
+            margin-bottom:
+                18px;
+        }
+
+        .panel-title {
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            gap:
+                10px;
+
+            margin-bottom:
+                15px;
+        }
+
+        .panel-title h3 {
+            margin: 0;
+
+            font-size:
+                16px;
+        }
+
+        .badge {
+            padding:
+                5px 9px;
+
+            border-radius:
+                5px;
+
+            background:
+                #122631;
+
+            color:
+                #62b9ff;
+
+            font-size:
+                10px;
+
+            font-weight:
+                bold;
+
+            white-space:
+                nowrap;
+        }
+
+        .risk-low {
+            color:
+                #65d38b !important;
+        }
+
+        .risk-medium {
+            color:
+                #f0b45c !important;
+        }
+
+        .risk-high {
+            color:
+                #ff7777 !important;
+        }
+
+        .form-grid {
+            display:
+                grid;
+
+            grid-template-columns:
+                2fr 1fr 1fr auto;
+
+            gap:
+                12px;
+        }
+
+        input,
+        select,
+        button {
+            width: 100%;
+
+            padding:
+                12px;
+
+            border-radius:
+                7px;
+
+            border:
+                1px solid #27434f;
+
+            background:
+                #071016;
+
+            color:
+                #fff;
+
+            outline:
+                none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color:
+                #62b9ff;
+        }
+
+        button {
+            background:
+                #1269a8;
+
+            cursor:
+                pointer;
+
+            font-weight:
+                bold;
+
+            border:
+                none;
+        }
+
+        button:hover {
+            background:
+                #1684cf;
+        }
+
+        button:disabled {
+            opacity:
+                0.6;
+
+            cursor:
+                not-allowed;
+        }
+
+        .secondary {
+            background:
+                #122631;
+        }
+
+        .secondary:hover {
+            background:
+                #193744;
+        }
+
+        .danger {
+            background:
+                #7d3030;
+        }
+
+        .danger:hover {
+            background:
+                #a23b3b;
+        }
+
+        .success-button {
+            background:
+                #176b43;
+        }
+
+        .status {
+            margin-top:
+                12px;
+
+            font-size:
+                12px;
+
+            color:
+                #8297a3;
+        }
+
+        .error {
+            color:
+                #ff7777;
+        }
+
+        .success {
+            color:
+                #65d38b;
+        }
+
+        .cards {
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap:
+                12px;
+        }
+
+        .card {
+            background:
+                #071016;
+
+            border:
+                1px solid #18313d;
+
+            border-radius:
+                9px;
+
+            padding:
+                15px;
+        }
+
+        .card-label {
+            color:
+                #8297a3;
+
+            font-size:
+                11px;
+        }
+
+        .card-value {
+            margin-top:
+                8px;
+
+            font-size:
+                22px;
+
+            font-weight:
+                bold;
+        }
+
+        .grid-2 {
+            display:
+                grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap:
+                18px;
+        }
+
+        .insight {
+            border:
+                1px solid #18313d;
+
+            background:
+                #071016;
+
+            border-radius:
+                8px;
+
+            padding:
+                12px;
+
+            margin-bottom:
+                9px;
+        }
+
+        .insight strong {
+            font-size:
+                12px;
+        }
+
+        .insight p {
+            margin:
+                7px 0 0;
+
+            color:
+                #9bb0ba;
+
+            font-size:
+                12px;
+
+            line-height:
+                1.5;
+        }
+
+        .dot {
+            display:
+                inline-block;
+
+            width:
+                7px;
+
+            height:
+                7px;
+
+            border-radius:
+                50%;
+
+            background:
+                #ff7777;
+
+            margin-right:
+                7px;
+        }
+
+        .dot.green {
+            background:
+                #65d38b;
+        }
+
+        .dot.orange {
+            background:
+                #f0b45c;
+        }
+
+        .vasp-box {
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap:
+                12px;
+        }
+
+        .vasp-item {
+            background:
+                #071016;
+
+            border:
+                1px solid #18313d;
+
+            border-radius:
+                8px;
+
+            padding:
+                12px;
+        }
+
+        .vasp-item small {
+            display:
+                block;
+
+            color:
+                #8297a3;
+
+            font-size:
+                10px;
+
+            margin-bottom:
+                5px;
+        }
+
+        .vasp-item span {
+            font-size:
+                12px;
+
+            word-break:
+                break-word;
+        }
+
+        .table-wrap {
+            overflow-x:
+                auto;
+        }
+
+        /* ===== TRANSACTION SEARCH ===== */
+        .transaction-search-bar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            margin: 0 0 12px 0;
+            align-items: center;
+        }
+
+        .transaction-search-input {
+            width: 100%;
+            min-width: 0;
+            padding: 11px 13px;
+            border: 1px solid #27434f;
+            border-radius: 8px;
+            background: #071016;
+            color: #fff;
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .transaction-search-input:focus {
+            border-color: #62b9ff;
+            box-shadow: 0 0 0 2px rgba(98,185,255,.08);
+        }
+
+        .transaction-search-input::placeholder {
+            color: #617b86;
+        }
+
+        .transaction-search-meta {
+            min-width: 145px;
+            text-align: right;
+            color: #8297a3;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        .transaction-search-meta strong {
+            color: #e7f1f5;
+        }
+
+        .transaction-search-clear {
+            width: auto;
+            padding: 10px 13px;
+            background: #122631;
+            border: 1px solid #27434f;
+        }
+
+        .transaction-search-clear:hover {
+            background: #193744;
+        }
+
+        @media (max-width: 700px) {
+            .transaction-search-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .transaction-search-meta {
+                text-align: left;
+            }
+        }
+
+        table {
+            width:
+                100%;
+
+            border-collapse:
+                collapse;
+
+            font-size:
+                11px;
+        }
+
+        th,
+        td {
+            padding:
+                10px;
+
+            border-bottom:
+                1px solid #18313d;
+
+            text-align:
+                left;
+
+            white-space:
+                nowrap;
+        }
+
+        th {
+            color:
+                #62b9ff;
+        }
+
+        td {
+            color:
+                #b7c7ce;
+        }
+
+        a {
+            color:
+                #62b9ff;
+
+            text-decoration:
+                none;
+        }
+
+        a:hover {
+            text-decoration:
+                underline;
+        }
+
+        .graph-advanced {
+            width: 100%;
+        }
+
+        .graph-toolbar-pro {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(110px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .graph-stat-pro {
+            min-height: 55px;
+            padding: 9px 10px;
+            border: 1px solid #18313d;
+            border-radius: 8px;
+            background: linear-gradient(180deg, rgba(13,32,41,.96), rgba(7,16,22,.96));
+        }
+
+        .graph-stat-pro small {
+            display: block;
+            color: #78919b;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .graph-stat-pro strong {
+            display: block;
+            margin-top: 5px;
+            color: #e7f1f5;
+            font-size: 14px;
+        }
+
+        .graph-stage-pro {
+            position: relative;
+            width: 100%;
+            min-height: 680px;
+            overflow: auto;
+            border: 1px solid #1c3946;
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(98,185,255,.055), transparent 32%),
+                linear-gradient(rgba(98,185,255,.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(98,185,255,.025) 1px, transparent 1px),
+                #02070b;
+            background-size: auto, 32px 32px, 32px 32px;
+            box-shadow: inset 0 0 60px rgba(0,0,0,.35);
+        }
+
+        .graph-stage-pro::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 50% 50%, transparent 40%, rgba(0,0,0,.38) 100%);
+        }
+
+        .graph-svg-pro {
+            width: 1600px;
+            height: 650px;
+            display: block;
+        }
+
+        .graph-edge-pro {
+            fill: none;
+            stroke: #26738e;
+            stroke-width: 2.6;
+            opacity: .95;
+        }
+
+        .graph-edge-pro.high {
+            stroke: #ff7777;
+            stroke-width: 3.2;
+        }
+
+        .graph-edge-pro.medium {
+            stroke: #f0b45c;
+            stroke-width: 3;
+        }
+
+        .graph-edge-flow {
+            fill: #58c7e9;
+        }
+
+        .graph-edge-flow.high {
+            fill: #ff7777;
+        }
+
+        .graph-edge-glow {
+            fill: none;
+            stroke: #62b9ff;
+            stroke-width: 7;
+            opacity: .08;
+        }
+
+        .graph-edge-label-pro {
+            fill: #d5edf4;
+            font-size: 11px;
+            font-family: Consolas, monospace;
+            font-weight: 700;
+        }
+
+        .graph-density-note {
+            margin: 0 0 10px;
+            padding: 9px 11px;
+            border: 1px solid #24414d;
+            border-radius: 8px;
+            background: rgba(18, 38, 49, .72);
+            color: #9bb0ba;
+            font-size: 10px;
+            line-height: 1.5;
+        }
+
+        .graph-svg-pro.dense {
+            min-width: 1600px;
+        }
+
+        .graph-edge-label-pro.dense,
+        .graph-node-title-pro.dense,
+        .graph-node-address-pro.dense,
+        .graph-node-role-pro.dense,
+        .graph-node-flow-pro.dense,
+        .graph-node-tx-pro.dense {
+            font-size: 8.5px;
+        }
+
+        .graph-node-bg.dense-node {
+            opacity: .98;
+        }
+
+        .graph-density-mode .graph-stage-pro {
+            min-height: 520px;
+        }
+
+        .graph-edge-hash-pro {
+            fill: #718a94;
+            font-size: 9px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-node-pro {
+            cursor: default;
+        }
+
+        .graph-node-bg {
+            fill: #08131a;
+            stroke: #2b5361;
+            stroke-width: 1.5;
+            filter: url(#nodeShadow);
+        }
+
+        .graph-node-bg.suspect {
+            stroke: #ff7777;
+            stroke-width: 2.8;
+        }
+
+        .graph-node-bg.sender {
+            stroke: #62b9ff;
+        }
+
+        .graph-node-bg.receiver {
+            stroke: #65d38b;
+        }
+
+        .graph-node-bg.vasp {
+            stroke: #f0b45c;
+            stroke-width: 2.3;
+        }
+
+        .graph-node-dot {
+            fill: #62b9ff;
+        }
+
+        .graph-node-dot.suspect {
+            fill: #ff7777;
+        }
+
+        .graph-node-dot.receiver {
+            fill: #65d38b;
+        }
+
+        .graph-node-dot.vasp {
+            fill: #f0b45c;
+        }
+
+        .graph-node-title-pro {
+            fill: #eff8fb;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .graph-node-address-pro {
+            fill: #9fb7bf;
+            font-size: 9px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-node-role-pro {
+            fill: #6d8791;
+            font-size: 9px;
+        }
+
+        .graph-node-flow-pro {
+            fill: #65d38b;
+            font-size: 10px;
+            font-family: Consolas, monospace;
+            font-weight: 700;
+        }
+
+        .graph-node-tx-pro {
+            fill: #78939d;
+            font-size: 8.5px;
+        }
+
+
+        /* ===== ADDRESS FOCUS / FULL DETAIL ===== */
+        .graph-node-pro {
+            transition: opacity .16s ease, filter .16s ease;
+        }
+
+        .graph-node-pro:hover .graph-node-bg,
+        .graph-node-pro.selected .graph-node-bg {
+            stroke-width: 3.2;
+            filter: drop-shadow(0 0 10px rgba(98,185,255,.28));
+        }
+
+        .graph-node-pro:hover .graph-node-title-pro,
+        .graph-node-pro.selected .graph-node-title-pro {
+            font-size: 13px;
+        }
+
+        .graph-node-pro.selected .graph-node-address-pro {
+            fill: #eff8fb;
+            font-size: 10px;
+        }
+
+        .graph-detail-overlay {
+            position: absolute;
+            z-index: 20;
+            top: 18px;
+            right: 18px;
+            width: min(470px, calc(100% - 36px));
+            max-height: calc(100% - 36px);
+            overflow: auto;
+            padding: 16px;
+            border: 1px solid #2d6072;
+            border-radius: 14px;
+            background: rgba(5, 14, 20, .97);
+            box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 28px rgba(37,131,165,.14);
+            backdrop-filter: blur(8px);
+            display: none;
+        }
+
+        .graph-detail-overlay.visible {
+            display: block;
+        }
+
+        .graph-detail-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .graph-detail-title {
+            color: #eff8fb;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: .4px;
+        }
+
+        .graph-detail-role {
+            margin-top: 4px;
+            color: #62b9ff;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+        }
+
+        .graph-detail-close {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 34px;
+            background: #122631;
+            border: 1px solid #3b6472;
+            border-radius: 8px;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .graph-detail-close:hover {
+            background: #193744;
+            border-color: #62b9ff;
+            color: #ffffff;
+        }
+
+        .graph-detail-address {
+            padding: 10px;
+            border: 1px solid #18313d;
+            border-radius: 8px;
+            background: #071016;
+            color: #dff3fa;
+            font: 11px/1.5 Consolas, monospace;
+            overflow-wrap: anywhere;
+            margin-bottom: 12px;
+            user-select: text;
+        }
+
+        .graph-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .graph-detail-card {
+            padding: 9px;
+            border: 1px solid #18313d;
+            border-radius: 8px;
+            background: #071016;
+        }
+
+        .graph-detail-card small {
+            display: block;
+            color: #718a94;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .graph-detail-card strong {
+            display: block;
+            margin-top: 4px;
+            color: #e7f1f5;
+            font-size: 12px;
+        }
+
+        .graph-detail-section-title {
+            margin: 12px 0 7px;
+            color: #9fc8d5;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+        }
+
+        .graph-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+        }
+
+        .graph-detail-table th,
+        .graph-detail-table td {
+            padding: 7px 6px;
+            border-bottom: 1px solid #18313d;
+            text-align: left;
+            vertical-align: top;
+            white-space: normal;
+        }
+
+        .graph-detail-table th {
+            color: #62b9ff;
+            font-size: 9px;
+        }
+
+        .graph-detail-table td {
+            color: #b7c7ce;
+        }
+
+        .graph-detail-table a {
+            color: #65d38b;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .graph-detail-muted {
+            color: #718a94;
+            font-size: 10px;
+        }
+
+        @media (max-width: 850px) {
+            .graph-detail-overlay {
+                width: calc(100% - 24px);
+                top: 12px;
+                right: 12px;
+                max-height: 55%;
+            }
+        }
+
+        .graph-lane-label-pro {
+            fill: #5c7b86;
+            font-size: 9px;
+            font-family: Consolas, monospace;
+            letter-spacing: 1px;
+        }
+
+        .graph-center-ring {
+            fill: none;
+            stroke: #ff7777;
+            stroke-width: 1;
+            opacity: .3;
+        }
+
+        .graph-legend-pro {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 10px;
+            color: #8297a3;
+            font-size: 10px;
+        }
+
+        .graph-legend-pro span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .graph-legend-pro i {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+            background: #62b9ff;
+        }
+
+        .graph-legend-pro i.receiver {
+            background: #65d38b;
+        }
+
+        .graph-legend-pro i.suspect {
+            background: #ff7777;
+        }
+
+        .graph-legend-pro i.vasp {
+            background: #f0b45c;
+        }
+
+        @media (max-width: 1000px) {
+            .graph-toolbar-pro {
+                grid-template-columns: repeat(3, minmax(110px, 1fr));
+            }
+        }
+
+        @media (max-width: 650px) {
+            .graph-toolbar-pro {
+                grid-template-columns: repeat(2, minmax(110px, 1fr));
+            }
+        }
+
+        .graph-advanced {
+            width: 100%;
+        }
+
+        .graph-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .graph-chip {
+            padding: 7px 10px;
+            border: 1px solid #18313d;
+            border-radius: 7px;
+            background: #071016;
+            color: #9bb0ba;
+            font-size: 10px;
+        }
+
+        .graph-chip strong {
+            color: #e7f1f5;
+        }
+
+        .graph-canvas {
+            width: 100%;
+            min-height: 560px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            border: 1px solid #18313d;
+            border-radius: 12px;
+            background:
+                radial-gradient(circle at 50% 40%, rgba(18, 105, 168, .08), transparent 35%),
+                #03080d;
+        }
+
+        .graph-svg {
+            width: 1400px;
+            height: 560px;
+            display: block;
+        }
+
+        .graph-lane {
+            stroke: #17313d;
+            stroke-width: 1;
+            stroke-dasharray: 4 6;
+            opacity: .8;
+        }
+
+        .graph-edge {
+            stroke: #2a7188;
+            stroke-width: 2.5;
+            opacity: .9;
+        }
+
+        .graph-edge.high {
+            stroke: #ff7777;
+        }
+
+        .graph-edge-label {
+            fill: #a8c0c8;
+            font-size: 11px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-edge-hash {
+            fill: #607d88;
+            font-size: 9px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-node {
+            cursor: default;
+        }
+
+        .graph-node-card {
+            fill: #0b171e;
+            stroke: #28505f;
+            stroke-width: 1.5;
+        }
+
+        .graph-node-card.suspect {
+            stroke: #ff7777;
+            stroke-width: 2.5;
+        }
+
+        .graph-node-card.vasp {
+            stroke: #f0b45c;
+            stroke-width: 2;
+        }
+
+        .graph-node-title {
+            fill: #e7f1f5;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .graph-node-address {
+            fill: #8fa7b0;
+            font-size: 9px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-node-amount {
+            fill: #65d38b;
+            font-size: 10px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-node-meta {
+            fill: #627b85;
+            font-size: 9px;
+        }
+
+        .graph-arrow {
+            fill: #2a7188;
+        }
+
+        .graph-key {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 9px;
+            color: #8297a3;
+            font-size: 10px;
+        }
+
+        .graph-key span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .graph-key i {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+            background: #62b9ff;
+        }
+
+        .graph-key i.suspect {
+            background: #ff7777;
+        }
+
+        .graph-key i.vasp {
+            background: #f0b45c;
+        }
+
+        .graph-empty {
+            padding: 25px;
+            color: #8297a3;
+            font-size: 12px;
+        }
+
+        .graph {
+            min-height:
+                250px;
+
+            overflow-x:
+                auto;
+
+            padding:
+                20px;
+        }
+
+        .graph-visual {
+            width: 100%;
+            min-height: 420px;
+            border: 1px solid #18313d;
+            border-radius: 10px;
+            background: rgba(3, 8, 13, .55);
+            overflow: hidden;
+        }
+
+        .graph-svg {
+            width: 100%;
+            height: 420px;
+            display: block;
+        }
+
+        .graph-edge {
+            stroke: #2a7188;
+            stroke-width: 2;
+            opacity: .8;
+        }
+
+        .graph-edge-label {
+            fill: #8fb8c5;
+            font-size: 10px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-node-circle {
+            fill: #0d2029;
+            stroke: #62b9ff;
+            stroke-width: 2;
+        }
+
+        .graph-node-circle.suspect {
+            stroke: #ff7777;
+        }
+
+        .graph-node-title {
+            fill: #e7f1f5;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .graph-node-address {
+            fill: #9bb0ba;
+            font-size: 9px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-node-amount {
+            fill: #65d38b;
+            font-size: 10px;
+            font-family: Consolas, monospace;
+        }
+
+        .graph-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .graph-meta-item {
+            padding: 7px 10px;
+            border: 1px solid #18313d;
+            border-radius: 7px;
+            background: #071016;
+            color: #9bb0ba;
+            font-size: 10px;
+        }
+
+        .graph-meta-item strong {
+            color: #e7f1f5;
+        }
+
+        .graph-legend {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            color: #8297a3;
+            font-size: 10px;
+        }
+
+        .graph-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .graph-legend i {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            background: #62b9ff;
+        }
+
+        .graph-legend i.suspect {
+            background: #ff7777;
+        }
+
+        .graph-row {
+            display:
+                flex;
+
+            flex-wrap:
+                wrap;
+
+            align-items:
+                center;
+
+            gap:
+                10px;
+        }
+
+        .node {
+            min-width:
+                190px;
+
+            max-width:
+                270px;
+
+            padding:
+                14px;
+
+            border-radius:
+                10px;
+
+            border:
+                1px solid #28505f;
+
+            background:
+                #0d2029;
+        }
+
+        .node-title {
+            font-size:
+                11px;
+
+            color:
+                #62b9ff;
+
+            margin-bottom:
+                7px;
+        }
+
+        .node-address {
+            font-size:
+                10px;
+
+            color:
+                #a8bbc3;
+
+            word-break:
+                break-all;
+        }
+
+        .node-amount {
+            margin-top:
+                8px;
+
+            font-size:
+                11px;
+
+            color:
+                #65d38b;
+        }
+
+        .arrow {
+            color:
+                #62b9ff;
+
+            font-size:
+                22px;
+        }
+
+        .summary {
+            white-space:
+                pre-wrap;
+
+            background:
+                #071016;
+
+            border:
+                1px solid #18313d;
+
+            border-radius:
+                8px;
+
+            padding:
+                15px;
+
+            color:
+                #b7c7ce;
+
+            font-size:
+                12px;
+
+            line-height:
+                1.6;
+        }
+
+        .actions {
+            display:
+                flex;
+
+            gap:
+                10px;
+
+            margin-top:
+                12px;
+
+            flex-wrap:
+                wrap;
+        }
+
+        .actions button {
+            width:
+                auto;
+        }
+
+        .match-box {
+            border:
+                1px solid #18313d;
+
+            background:
+                #071016;
+
+            border-radius:
+                8px;
+
+            padding:
+                14px;
+
+            margin-bottom:
+                10px;
+        }
+
+        .match-found {
+            border-color:
+                #8b3434;
+        }
+
+        .no-match {
+            border-color:
+                #24543a;
+        }
+
+        .match-title {
+            font-size:
+                13px;
+
+            font-weight:
+                bold;
+        }
+
+        .match-details {
+            margin-top:
+                8px;
+
+            color:
+                #9bb0ba;
+
+            font-size:
+                11px;
+
+            line-height:
+                1.7;
+        }
+
+        .feature-grid {
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap:
+                10px;
+        }
+
+        .feature-item {
+            background:
+                #071016;
+
+            border:
+                1px solid #18313d;
+
+            border-radius:
+                8px;
+
+            padding:
+                12px;
+
+            font-size:
+                11px;
+        }
+
+        .feature-active {
+            color:
+                #65d38b;
+        }
+
+        .feature-pending {
+            color:
+                #f0b45c;
+        }
+
+        .watch-box {
+            display:
+                grid;
+
+            grid-template-columns:
+                1fr auto auto;
+
+            gap:
+                10px;
+
+            align-items:
+                center;
+        }
+
+        .realtime-card {
+            margin-top:
+                12px;
+
+            border:
+                1px solid #18313d;
+
+            background:
+                #071016;
+
+            border-radius:
+                8px;
+
+            padding:
+                12px;
+        }
+
+        .integration-grid {
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap:
+                10px;
+        }
+
+        .integration-item {
+            background:
+                #071016;
+
+            border:
+                1px solid #18313d;
+
+            border-radius:
+                8px;
+
+            padding:
+                12px;
+
+            font-size:
+                11px;
+        }
+
+        .json-small {
+            font-size:
+                10px;
+
+            color:
+                #8297a3;
+
+            word-break:
+                break-word;
+        }
+
+        @media (
+            max-width: 900px
+        ) {
+            .form-grid,
+            .cards,
+            .vasp-box,
+            .grid-2,
+            .feature-grid,
+            .integration-grid,
+            .watch-box {
+                grid-template-columns:
+                    1fr;
+            }
+
+            .actions button {
+                width:
+                    100%;
+            }
+        }
+
+    @media print {
+        body { background: #fff; color: #000; }
+        .header, .panel { border: 1px solid #ccc; background: #fff; color: #000; }
+        .actions, #analyzeBtn, .watch-box, .header-status { display: none !important; }
+        .card, .insight, .match-box, .vasp-item, .feature-item, .integration-item, .node, .summary { background: #fff; color: #000; border-color: #ccc; }
+        a { color: #000; }
+    }
+
+
+        /* ===== LIVE CRYPTO TRANSACTION BACKGROUND ===== */
+        body {
+            position: relative;
+            overflow-x: hidden;
+            background: #03080d;
+        }
+
+        #txBackground {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            opacity: .72;
+        }
+
+        .tx-stream {
+            position: absolute;
+            white-space: nowrap;
+            font: 10px/1.2 Consolas, monospace;
+            color: #1d7892;
+            opacity: .34;
+            animation: txMove linear infinite;
+        }
+
+        .tx-stream strong { color: #2aa8c7; font-weight: 600; }
+        .tx-stream .amount { color: #3b9f72; }
+
+        .tx-line {
+            position: absolute;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #12657a, transparent);
+            opacity: .16;
+            animation: linePulse 4s ease-in-out infinite;
+        }
+
+        .tx-node {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #1d9bb8;
+            box-shadow: 0 0 12px #1d9bb8;
+            opacity: .5;
+            animation: nodePulse 2.8s ease-in-out infinite;
+        }
+
+        .container { position: relative; z-index: 2; }
+        .header, .panel { box-shadow: 0 10px 35px rgba(0,0,0,.28); }
+        .header { background: rgba(11,23,30,.94); }
+        .panel { background: rgba(11,23,30,.94); }
+
+        @keyframes txMove {
+            from { transform: translateX(110vw); }
+            to { transform: translateX(-120vw); }
+        }
+
+        @keyframes linePulse {
+            0%, 100% { opacity: .06; }
+            50% { opacity: .22; }
+        }
+
+        @keyframes nodePulse {
+            0%, 100% { transform: scale(.7); opacity: .2; }
+            50% { transform: scale(1.6); opacity: .65; }
+        }
+
+    
+
+        /* ===== GRAPH PERFORMANCE FIX ===== */
+        .graph-stage-pro {
+            max-height: 860px;
+            overflow: auto;
+        }
+        .graph-svg-pro {
+            min-width: 1200px;
+            width: 1800px;
+            height: 820px;
+        }
+        .graph-density-note {
+            margin: 8px 0 10px;
+            padding: 9px 11px;
+            border: 1px solid #18313d;
+            border-radius: 8px;
+            background: rgba(7,16,22,.88);
+            color: #8da7b1;
+            font-size: 10px;
+            line-height: 1.45;
+        }
+        .graph-node-bg { filter: url(#nodeShadow); }
+
+        /* ===== GRAPH ZOOM CONTROLS ===== */
+        .graph-zoom-bar {
+            display:flex;
+            align-items:center;
+            gap:7px;
+            margin:0 0 10px;
+            flex-wrap:wrap;
+        }
+        .graph-zoom-bar button {
+            width:auto;
+            min-width:38px;
+            padding:8px 11px;
+            border:1px solid #244b5b;
+            border-radius:7px;
+            background:#071016;
+            color:#dbeef3;
+            font-weight:700;
+            cursor:pointer;
+        }
+        .graph-zoom-bar button:hover { background:#10232d; }
+        .graph-zoom-level {
+            min-width:76px;
+            text-align:center;
+            padding:8px 10px;
+            border:1px solid #18313d;
+            border-radius:7px;
+            color:#8da7b1;
+            font-size:10px;
+            font-family:Consolas,monospace;
+        }
+        .graph-zoom-help {
+            color:#647f8a;
+            font-size:10px;
+            margin-left:3px;
+        }
+        .graph-stage-pro.graph-zoom-enabled {
+            overscroll-behavior:contain;
+        }
+        .graph-zoom-viewport {
+            width:100%;
+            min-height:820px;
+            overflow:auto;
+            position:relative;
+            touch-action:none;
+            cursor:grab;
+        }
+        .graph-zoom-viewport.panning { cursor:grabbing; }
+        .graph-zoom-content {
+            width:1800px;
+            height:820px;
+            transform-origin:0 0;
+        }
+        .graph-zoom-content svg {
+            display:block;
+        }
+
+</style>
+
+</head>
+
+<body>
+
+<!-- Animated blockchain transaction layer -->
+<div id="txBackground" aria-hidden="true"></div>
+
+<div class="container">
+
+    <div class="header">
+
+        <h1>
+            CRYPTO TRACE
+        </h1>
+
+        <p>
+            Real-Time Cryptocurrency Fraud Attribution & Blockchain Intelligence
+        </p>
+
+        <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+            <span class="badge" id="apiStatusBadge">CHECKING...</span>
+            <span class="badge" id="dbStatusBadge">DATA: --/--</span>
+            <span class="badge" id="watcherStatusBadge" style="display: none;"></span>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         WALLET INVESTIGATION
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                🔍 Wallet Investigation
+            </h3>
+
+            <span class="badge" id="investigationNetworkBadge">
+                TRON / TRC-20
+            </span>
+
+        </div>
+
+        <div class="form-grid">
+
+            <input
+                id="walletInput"
+                type="text"
+                placeholder="Enter TRON wallet address (T...)"
+            >
+
+            <select
+                id="blockchainInput"
+            >
+                <option value="tron-usdt" selected>
+                    TRON / TRC-20
+                </option>
+
+                <option value="ethereum-usdt">
+                    Ethereum / ERC-20
+                </option>
+
+                <option value="bnb-usdt">
+                    BNB Chain / BEP-20
+                </option>
+
+                <option value="solana-usdt">
+                    Solana / SPL USDT
+                </option>
+            </select>
+
+            <select
+                id="depthInput"
+            >
+                <option value="1">
+                    Depth 1
+                </option>
+
+                <option value="2">
+                    Depth 2
+                </option>
+
+                <option value="3">
+                    Depth 3
+                </option>
+
+                <option value="4">
+                    Depth 4
+                </option>
+
+                <option value="5">
+                    Depth 5
+                </option>
+
+                <option value="all">
+                    ALL
+                </option>
+            </select>
+
+            <button
+                id="analyzeBtn"
+                onclick="analyzeWallet()"
+            >
+            
+                ANALYZE
+            </button>
+
+        </div>
+
+        <div
+            id="status"
+            class="status"
+        >
+            Ready for investigation.
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         OVERVIEW
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                📊 Investigation Overview
+            </h3>
+
+            <span
+                id="riskBadge"
+                class="badge"
+            >
+                NOT ANALYZED
+            </span>
+
+        </div>
+
+        <div class="cards">
+
+            <div class="card">
+
+                <div class="card-label">
+                    Risk Score
+                </div>
+
+                <div
+                    id="riskScore"
+                    class="card-value"
+                >
+                    —
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <div class="card-label">
+                    Total Received
+                </div>
+
+                <div
+                    id="totalReceived"
+                    class="card-value"
+                >
+                    —
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <div class="card-label">
+                    Total Sent
+                </div>
+
+                <div
+                    id="totalSent"
+                    class="card-value"
+                >
+                    —
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <div class="card-label">
+                    Transactions
+                </div>
+
+                <div
+                    id="transactionCount"
+                    class="card-value"
+                >
+                    —
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+   
+
+    <!-- =====================================================
+         VASP
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                🏦 VASP Attribution
+            </h3>
+
+            <span class="badge">
+                ATTRIBUTION
+            </span>
+
+        </div>
+
+        <div class="vasp-box">
+
+            <div class="vasp-item">
+
+                <small>
+                    VASP
+                </small>
+
+                <span id="vaspName">
+                    —
+                </span>
+
+            </div>
+
+            <div class="vasp-item">
+
+                <small>
+                    TYPE
+                </small>
+
+                <span id="vaspType">
+                    —
+                </span>
+
+            </div>
+
+            <div class="vasp-item">
+
+                <small>
+                    CONFIDENCE
+                </small>
+
+                <span id="vaspConfidence">
+                    —
+                </span>
+
+            </div>
+
+            <div class="vasp-item">
+
+                <small>
+                    VERIFIED
+                </small>
+
+                <span id="vaspVerified">
+                    —
+                </span>
+
+            </div>
+
+        </div>
+
+        <div
+            id="vaspNote"
+            class="status"
+        >
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         COMPLAINT
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                🚨 Cybercrime Complaint Cross-Reference
+            </h3>
+
+            <span
+                id="complaintBadge"
+                class="badge"
+            >
+                NOT CHECKED
+            </span>
+
+        </div>
+
+        <div
+            id="complaintContainer"
+        >
+            <p class="status">
+                Analyze a wallet to cross-reference complaint records.
+            </p>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         GRAPH
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                🕸️ Fund Flow Graph
+            </h3>
+
+            <span class="badge">
+                TRACE
+            </span>
+
+        </div>
+
+        <div
+            id="graphContainer"
+            class="graph"
+        >
+            <span class="status">
+                Analyze a wallet to generate the fund-flow graph.
+            </span>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         INSIGHTS + ALERTS
+    ====================================================== -->
+
+    <div class="grid-2">
+
+        <div class="panel">
+
+            <div class="panel-title">
+
+                <h3>
+                    🧠 Investigation Insights
+                </h3>
+
+            </div>
+
+            <div
+                id="insightsContainer"
+            >
+                <p class="status">
+                    No analysis available.
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="panel">
+
+            <div class="panel-title">
+
+                <h3>
+                    🚨 Automated Investigation Alerts
+                </h3>
+
+                <span
+                    id="alertBadge"
+                    class="badge"
+                >
+                    NO ALERTS
+                </span>
+
+            </div>
+
+            <div
+                id="alertsContainer"
+            >
+                <p class="status">
+                    Analyze a wallet to generate alerts.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         FRAUD TYPOLOGY
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                🧠 Fraud Typology
+            </h3>
+
+            <span class="badge">
+                PATTERN ANALYSIS
+            </span>
+
+        </div>
+
+        <div
+            id="typologyContainer"
+        >
+            <p class="status">
+                No typology analysis available.
+            </p>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECOMMENDATIONS
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                📌 Investigator Recommendations
+            </h3>
+
+            <span class="badge">
+                ACTION
+            </span>
+
+        </div>
+
+        <div
+            id="recommendationsContainer"
+        >
+            <p class="status">
+                Analyze a wallet to generate recommendations.
+            </p>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         EVIDENCE
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                🔐 Evidence Preservation
+            </h3>
+
+            <span
+                id="evidenceBadge"
+                class="badge"
+            >
+                NOT PRESERVED
+            </span>
+
+        </div>
+
+        <div
+            id="evidenceContainer"
+        >
+
+            <p class="status">
+                Analyze a wallet first.
+            </p>
+
+        </div>
+
+        <div class="actions">
+
+            <button
+                onclick="preserveEvidence()"
+            >
+                PRESERVE EVIDENCE
+            </button>
+
+            <button
+                class="secondary"
+                onclick="downloadEvidenceJSON()"
+            >
+                DOWNLOAD EVIDENCE
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUMMARY
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                📄 Investigation Summary
+            </h3>
+
+            <span class="badge">
+                REPORT
+            </span>
+
+        </div>
+
+        <div
+            id="summaryContainer"
+            class="summary"
+        >
+            No investigation report generated.
+        </div>
+
+        <div class="actions">
+
+            <button
+                onclick="printReport()"
+            >
+                PRINT REPORT
+            </button>
+
+            <button
+                onclick="downloadJSON()"
+            >
+                DOWNLOAD JSON
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TRANSACTIONS
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                💸 Transactions
+            </h3>
+
+            <span
+                class="badge"
+                id="transactionBadge"
+            >
+                TRON / TRC-20 USDT
+            </span>
+
+        </div>
+
+        <div class="transaction-search-bar">
+            <input
+                id="transactionSearchInput"
+                class="transaction-search-input"
+                type="search"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Search transaction address, TX hash, amount, type..."
+                aria-label="Search transactions"
+            >
+
+            <button
+                id="transactionSearchClear"
+                class="transaction-search-clear secondary"
+                type="button"
+            >
+                CLEAR
+            </button>
+
+            <div
+                id="transactionSearchMeta"
+                class="transaction-search-meta"
+                style="grid-column: 1 / -1; text-align:left;"
+            >
+                Search across all loaded transactions
+            </div>
+        </div>
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Type
+                        </th>
+
+                        <th>
+                            Amount
+                        </th>
+
+                        <th>
+                            From
+                        </th>
+
+                        <th>
+                            To
+                        </th>
+
+                        <th>
+                            Timestamp
+                        </th>
+
+                        <th>
+                            Transaction
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody
+                    id="transactionBody"
+                >
+
+                    <tr>
+
+                        <td colspan="6">
+                            No transactions loaded.
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PLATFORM STATUS
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                ⚙️ Platform Capability Status
+            </h3>
+
+            <span class="badge">
+                SYSTEM
+            </span>
+
+        </div>
+
+        <div class="feature-grid">
+
+            <div class="feature-item feature-active">
+                ✅ TRON / TRC-20 Analysis
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Transaction Tracing
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Risk Analysis
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Fund Flow Visualization
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Automated Alerts
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Fraud Typology Detection
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Investigator Recommendations
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Complaint Cross-Reference
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ JSON Investigation Report
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Real-Time Wallet Monitoring
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Evidence Preservation
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ API Health Monitoring
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ Ethereum / ERC-20 Integration
+            </div>
+
+            <div class="feature-item feature-active">
+                ✅ BNB Chain / BEP-20 Integration
+            </div>
+
+            <div class="feature-item feature-pending">
+                ⚠️ Solana / SPL USDT
+            </div>
+
+            
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         INTEGRATION STATUS
+    ====================================================== -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h3>
+                🔌 Integration Status
+            </h3>
+
+            <span class="badge">
+                API
+            </span>
+
+        </div>
+
+        <div
+            id="integrationContainer"
+            class="integration-grid"
+        >
+
+            <div class="integration-item">
+                Checking integrations...
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let latestAnalysis = null;
+let allTransactionRows = [];
+const MAX_VISIBLE_TRANSACTION_ROWS = 250;
+
+let latestEvidence = null;
+
+let realtimeTimer = null;
+
+let watchedWallet = null;
+
+
+/* =========================================================
+   API
+========================================================= */
+
+const API_BASE = (
+    window.CHAINTRACE_API_URL ||
+    ((window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1")
+        ? "http://localhost:3000"
+        : "https://your-backend.onrender.com")
+).replace(/\/+$/, "");
+
+
+/* =========================================================
+   INIT
+========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        checkHealth();
+
+        checkIntegrations();
+
+        const transactionSearchInput =
+            document.getElementById("transactionSearchInput");
+
+        const transactionSearchClear =
+            document.getElementById("transactionSearchClear");
+
+        if (transactionSearchInput) {
+            transactionSearchInput.addEventListener("input", event => {
+                applyTransactionSearch(event.target.value);
+            });
+        }
+
+        if (transactionSearchClear) {
+            transactionSearchClear.addEventListener("click", () => {
+                if (transactionSearchInput) {
+                    transactionSearchInput.value = "";
+                    transactionSearchInput.focus();
+                }
+                applyTransactionSearch("");
+            });
+        }
+
+        const walletInput =
+            document.getElementById(
+                "walletInput"
+            );
+
+        const watchInput =
+            document.getElementById(
+                "watchWalletInput"
+            );
+
+        if (walletInput) {
+            walletInput.addEventListener(
+                "input",
+                () => {
+                    if (watchInput && !watchInput.value) {
+                        watchInput.value = walletInput.value;
+                    }
+                }
+            );
+
+            walletInput.addEventListener(
+                "keydown",
+                event => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        analyzeWallet();
+                    }
+                }
+            );
+        }
+
+        if (watchInput) {
+            watchInput.addEventListener(
+                "keydown",
+                event => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        startWatching();
+                    }
+                }
+            );
+        }
+
+        setInterval(
+            checkHealth,
+            30000
+        );
+
+    }
+);
+
+
+
+/* =========================================================
+   ANIMATED CRYPTO TRANSACTION BACKGROUND
+========================================================= */
+function initTransactionBackground() {
+    const bg = document.getElementById("txBackground");
+    if (!bg) return;
+
+    const shortHash = () => {
+        const chars = "0123456789abcdef";
+        let out = "0x";
+        for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
+        return out + "...";
+    };
+
+    const streamCount = Math.min(16, Math.max(9, Math.floor(window.innerWidth / 115)));
+    for (let i = 0; i < streamCount; i++) {
+        const el = document.createElement("div");
+        el.className = "tx-stream";
+        const amount = (Math.random() * 98000 + 120).toFixed(2);
+        el.innerHTML = `TX <strong>${shortHash()}</strong>  →  <strong>${shortHash()}</strong>  <span class="amount">${amount} USDT</span>  •  TRON  •  CONFIRMED`;
+        el.style.top = `${4 + Math.random() * 92}%`;
+        el.style.animationDuration = `${18 + Math.random() * 28}s`;
+        el.style.animationDelay = `${-Math.random() * 35}s`;
+        bg.appendChild(el);
+    }
+
+    for (let i = 0; i < 8; i++) {
+        const line = document.createElement("div");
+        line.className = "tx-line";
+        line.style.top = `${10 + i * 12}%`;
+        line.style.left = `${Math.random() * 25}%`;
+        line.style.width = `${35 + Math.random() * 55}%`;
+        line.style.animationDelay = `${Math.random() * 3}s`;
+        bg.appendChild(line);
+    }
+
+    for (let i = 0; i < 24; i++) {
+        const node = document.createElement("div");
+        node.className = "tx-node";
+        node.style.left = `${Math.random() * 100}%`;
+        node.style.top = `${Math.random() * 100}%`;
+        node.style.animationDelay = `${Math.random() * 3}s`;
+        bg.appendChild(node);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", initTransactionBackground);
+
+/* =========================================================
+   HEALTH
+========================================================= */
+
+async function checkHealth() {
+
+    const badge =
+        document.getElementById(
+            "apiStatusBadge"
+        );
+
+    const dbBadge =
+        document.getElementById(
+            "dbStatusBadge"
+        );
+
+    const watcherBadge =
+        document.getElementById(
+            "watcherStatusBadge"
+        );
+
+    try {
+
+        const data =
+            await fetchJson(
+                API_BASE_URL +
+                    "/api/health",
+                {
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+        if (data.status !== "online" && data.status !== "healthy") {
+            throw new Error(
+                "Backend offline"
+            );
+        }
+
+        if (badge) {
+
+            badge.innerText =
+                "API ONLINE";
+
+            badge.className =
+                "badge risk-low";
+        }
+
+        if (dbBadge) {
+
+            const complaints =
+                data.data?.complaintDatabase ??
+                data.complaintDatabase ??
+                0;
+
+            const vasps =
+                data.data?.vaspDatabase ??
+                data.vaspDatabase ??
+                0;
+
+            dbBadge.innerText =
+                `DATA: ${complaints}/${vasps}`;
+
+            dbBadge.className =
+                "badge";
+        }
+
+        if (watcherBadge) {
+            const count = Number(
+                data.data?.realtimeWatchers ??
+                data.realtimeWatchers ??
+                0
+            );
+
+            if (count > 0) {
+                watcherBadge.innerText = `WATCHERS: ${count}`;
+                watcherBadge.style.display = "inline-flex";
+                watcherBadge.className = "badge";
+            } else {
+                watcherBadge.style.display = "none";
+            }
+        }
+
+    } catch (error) {
+
+        if (badge) {
+            badge.innerText =
+                "API OFFLINE";
+
+            badge.className =
+                "badge risk-high";
+        }
+
+        if (dbBadge) {
+            dbBadge.innerText =
+                "DATA: OFFLINE";
+
+            dbBadge.className =
+                "badge risk-high";
+        }
+
+        if (watcherBadge) {
+            watcherBadge.style.display = "none";
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   FETCH HELPER
+========================================================= */
+
+async function fetchJson(url, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    let response;
+
+    try {
+        response = await fetch(url, { ...options, signal: controller.signal });
+    } catch (error) {
+        if (error.name === "AbortError") {
+            throw new Error("Backend request timed out. Check whether the Node.js server is running on port 3000.");
+        }
+        throw new Error("Cannot connect to backend. Start the backend with npm start.");
+    } finally {
+        clearTimeout(timeout);
+    }
+    const contentType = response.headers.get("content-type") || "";
+
+    let data;
+
+    if (contentType.includes("application/json")) {
+        data = await response.json();
+    } else {
+        const text = await response.text();
+        data = text ? { message: text } : {};
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            data.error ||
+            data.message ||
+            `Request failed (${response.status})`
+        );
+    }
+
+    return data;
+}
+
+
+/* =========================================================
+   TRON WALLET VALIDATION
+========================================================= */
+
+function isValidTronAddress(wallet) {
+    return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(wallet);
+}
+
+function isValidEvmAddress(wallet) {
+    return /^0x[a-fA-F0-9]{40}$/.test(wallet);
+}
+
+function isValidSolanaAddress(wallet) {
+    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet);
+}
+
+function updateTokenUI(token) {
+    const value =
+        String(token || "USDT").toUpperCase();
+
+    const tokenElements = [
+        document.getElementById("tokenBadge"),
+        document.getElementById("tokenSymbol"),
+        document.getElementById("selectedToken"),
+        document.getElementById("transactionBadge")
+    ];
+
+    tokenElements.forEach((element) => {
+        if (element) {
+            element.textContent = value;
+        }
+    });
+}
+
+
+/* =========================================================
+   ASSET / NETWORK SELECTOR
+========================================================= */
+
+function updateInvestigationNetworkLabel() {
+
+    const select = document.getElementById("blockchainInput");
+    const badge = document.getElementById("investigationNetworkBadge");
+
+    if (!select || !badge) return;
+
+    const labels = {
+        "tron-usdt": "TRON / TRC-20",
+        "ethereum-usdt": "Ethereum / ERC-20",
+        "bnb-usdt": "BNB Chain / BEP-20",
+        "solana-usdt": "Solana / SPL USDT"
+    };
+
+    const placeholders = {
+        "tron-usdt": "Enter TRON wallet address (T...)",
+        "ethereum-usdt": "Enter Ethereum wallet address (0x...)",
+        "bnb-usdt": "Enter BNB Chain wallet address (0x...)",
+        "solana-usdt": "Enter Solana wallet address..."
+    };
+
+    badge.innerText =
+        labels[select.value] ||
+        "TRON / TRC-20";
+
+    const walletInput =
+        document.getElementById("walletInput");
+
+    if (walletInput) {
+        walletInput.placeholder =
+            placeholders[select.value] ||
+            placeholders["tron-usdt"];
+    }
+}
+
+const investigationNetworkSelect = document.getElementById("blockchainInput");
+if (investigationNetworkSelect) {
+    investigationNetworkSelect.addEventListener("change", updateInvestigationNetworkLabel);
+    updateInvestigationNetworkLabel();
+}
+
+
+/* =========================================================
+   ANALYZE
+========================================================= */
+
+async function analyzeWallet() {
+
+    const walletInput =
+        document.getElementById(
+            "walletInput"
+        );
+
+    const blockchainInput =
+        document.getElementById(
+            "blockchainInput"
+        );
+
+    const depthInput =
+        document.getElementById(
+            "depthInput"
+        );
+
+    const status =
+        document.getElementById(
+            "status"
+        );
+
+    const button =
+        document.getElementById(
+            "analyzeBtn"
+        );
+
+    const wallet =
+        walletInput.value.trim();
+
+    const selectedAsset =
+        blockchainInput.value;
+
+    let blockchain = "tron";
+    let token = "USDT";
+
+    if (selectedAsset === "ethereum-usdt") {
+        blockchain = "ethereum";
+    } else if (selectedAsset === "bnb-usdt") {
+        blockchain = "bnb";
+    } else if (selectedAsset === "solana-usdt") {
+        blockchain = "solana";
+    } else {
+        blockchain = "tron";
+        token = "USDT";
+    }
+
+    const depthValue = depthInput.value;
+
+    const depth =
+        depthValue === "all"
+            ? "all"
+            : Number(depthValue) || 1;
+
+    if (!wallet) {
+        alert(
+            `Please enter a ${blockchain === "tron"
+                ? "TRON"
+                : blockchain === "ethereum"
+                    ? "Ethereum"
+                    : blockchain === "bnb"
+                        ? "BNB Chain"
+                        : "Solana"} wallet address.`
+        );
+        walletInput.focus();
+        return;
+    }
+
+    if (blockchain === "tron") {
+
+        if (!isValidTronAddress(wallet)) {
+            status.className = "status error";
+            status.innerText = "❌ Wrong address / Does not match selected blockchain: TRON.";
+            walletInput.focus();
+            return;
+        }
+
+    } else if (blockchain === "solana") {
+
+        if (!isValidSolanaAddress(wallet)) {
+            status.className = "status error";
+            status.innerText = "❌ Wrong address / Does not match selected blockchain: Solana.";
+            walletInput.focus();
+            return;
+        }
+
+    } else {
+
+        if (!isValidEvmAddress(wallet)) {
+            status.className = "status error";
+            status.innerText = `❌ Wrong address / Does not match selected blockchain: ${blockchain === "ethereum" ? "Ethereum" : "BNB Chain"}.`;
+            walletInput.focus();
+            return;
+        }
+    }
+
+    status.className =
+        "status";
+
+    status.innerText =
+        `Analyzing ${blockchain === "tron"
+            ? "TRON"
+            : blockchain === "ethereum"
+                ? "Ethereum"
+                : blockchain === "bnb"
+                    ? "BNB Chain"
+                    : "Solana"} wallet — ${token} — depth ${depth}...`;
+
+    button.disabled =
+        true;
+
+    button.innerText =
+        "ANALYZING...";
+
+    try {
+
+        const data =
+            await fetchJson(
+                API_BASE_URL +
+                    "/api/analyze",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        wallet,
+                        blockchain,
+                        token,
+                        depth
+                    })
+                }
+            );
+
+        if (!data.success) {
+            throw new Error(data.message || data.error || "Analysis failed.");
+        }
+
+        latestAnalysis =
+            data;
+
+        updateTokenUI(data.token || token);
+
+        updateOverview(
+            data
+        );
+
+        updateVasp(
+            data.vasp
+        );
+
+        updateComplaint(
+            data.complaintCrossReference
+        );
+
+        updateInsights(
+            data
+        );
+
+        updateAlerts(
+            data
+        );
+
+        updateTypologies(
+            data
+        );
+
+        updateRecommendations(
+            data
+        );
+
+        updateSummary(
+            data
+        );
+
+        renderTransactions(
+            data.transactions ||
+                []
+        );
+
+        renderGraph(
+            data.graph
+        );
+
+        const watchWalletInput =
+            document.getElementById(
+                "watchWalletInput"
+            );
+
+        if (watchWalletInput) {
+            watchWalletInput.value =
+                wallet;
+        }
+
+        status.className =
+            "status success";
+
+        status.innerText =
+            `Analysis completed — ${
+                data.transactionStats
+                    ?.totalTransactions ??
+                data.transactions
+                    ?.length ??
+                0
+            } transactions found.`;
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+
+        status.className =
+            "status error";
+
+        let errorMessage =
+            error.message || "Unknown error";
+
+        const errorLower =
+            errorMessage.toLowerCase();
+
+        if (
+            errorLower.includes("invalid") &&
+            errorLower.includes("wallet")
+        ) {
+            errorMessage =
+                `Wrong address / Does not match selected blockchain: ${blockchain === "tron"
+                    ? "TRON"
+                    : blockchain === "ethereum"
+                        ? "Ethereum"
+                        : blockchain === "bnb"
+                            ? "BNB Chain"
+                            : "Solana"}.`;
+        } else if (
+            errorLower.includes("api key")
+        ) {
+            errorMessage =
+                "Blockchain API configuration error. Please check the backend .env API key.";
+        } else if (
+            errorLower.includes("rate limit")
+        ) {
+            errorMessage =
+                "Blockchain API rate limit reached. Please try again later.";
+        } else if (
+            errorLower.includes("timed out")
+        ) {
+            errorMessage =
+                "Blockchain request timed out. Please try again.";
+        } else if (
+            errorLower.includes("cannot connect") ||
+            errorLower.includes("backend")
+        ) {
+            errorMessage =
+                "Cannot connect to ChainTrace backend. Make sure the Node.js server is running on port 3000.";
+        }
+
+        status.innerText =
+            "Analysis failed: " +
+            errorMessage;
+
+        console.error("ChainTrace analysis error:", error);
+
+    } finally {
+
+        button.disabled =
+            false;
+
+        button.innerText =
+            "ANALYZE";
+    }
+
+}
+
+
+/* =========================================================
+   OVERVIEW
+========================================================= */
+
+function updateOverview(
+    data
+) {
+
+    const riskScore =
+        typeof data.risk === "number"
+            ? data.risk
+            : Number(
+                data.risk?.score ??
+                data.risk?.riskScore ??
+                data.ruleBasedRisk?.score ??
+                data.aiMlRisk?.score ??
+                0
+            );
+
+    setText(
+        "riskScore",
+        Number.isFinite(riskScore)
+            ? `${Math.round(riskScore)}/100`
+            : "0/100"
+    );
+
+    const overviewTransactions =
+        Array.isArray(data.transactions)
+            ? data.transactions
+            : [];
+
+    const receivedFallback =
+        overviewTransactions.reduce(
+            (sum, tx) => {
+                const amount =
+                    Number(
+                        tx.amount ??
+                        tx.value ??
+                        0
+                    );
+
+                const direction =
+                    String(
+                        tx.direction ??
+                        tx.type ??
+                        ""
+                    ).toLowerCase();
+
+                return (
+                    direction === "received" ||
+                    direction === "incoming"
+                        ? sum + (
+                            Number.isFinite(amount)
+                                ? amount
+                                : 0
+                        )
+                        : sum
+                );
+            },
+            0
+        );
+
+    const sentFallback =
+        overviewTransactions.reduce(
+            (sum, tx) => {
+                const amount =
+                    Number(
+                        tx.amount ??
+                        tx.value ??
+                        0
+                    );
+
+                const direction =
+                    String(
+                        tx.direction ??
+                        tx.type ??
+                        ""
+                    ).toLowerCase();
+
+                return (
+                    direction === "sent" ||
+                    direction === "outgoing"
+                        ? sum + (
+                            Number.isFinite(amount)
+                                ? amount
+                                : 0
+                        )
+                        : sum
+                );
+            },
+            0
+        );
+
+    const receivedValue =
+        Number(
+            data.totalReceived
+        );
+
+    const sentValue =
+        Number(
+            data.totalSent
+        );
+
+    setText(
+        "totalReceived",
+        `${formatNumber(
+            Number.isFinite(receivedValue) &&
+            receivedValue > 0
+                ? receivedValue
+                : receivedFallback
+        )} USDT`
+    );
+
+    setText(
+        "totalSent",
+        `${formatNumber(
+            Number.isFinite(sentValue) &&
+            sentValue > 0
+                ? sentValue
+                : sentFallback
+        )} USDT`
+    );
+
+    setText(
+        "transactionCount",
+        data.transactionStats
+            ?.totalTransactions ??
+        data.transactions
+            ?.length ??
+        0
+    );
+
+    const badge =
+        document.getElementById(
+            "riskBadge"
+        );
+
+    if (!badge) {
+        return;
+    }
+
+    badge.innerText =
+        data.riskText ||
+        "ANALYZED";
+
+    const risk =
+        Number(
+            typeof data.risk === "number"
+                ? data.risk
+                : data.risk?.score ??
+                  data.risk?.riskScore ??
+                  data.riskScore ??
+                  data.ruleBasedRisk?.score ??
+                  data.aiMlRisk?.score ??
+                  0
+        );
+
+    if (
+        risk >= 75
+    ) {        badge.className =
+            "badge risk-high";
+    } else if (
+        risk >= 25
+    ) {
+        badge.className =
+            "badge risk-medium";
+    } else {
+        badge.className =
+            "badge risk-low";
+    }
+
+}
+
+
+/* =========================================================
+   VASP
+========================================================= */
+
+function updateVasp(
+    vasp
+) {
+
+    setText(
+        "vaspName",
+        vasp?.name ||
+            "No VASP Identified"
+    );
+
+    setText(
+        "vaspType",
+        vasp?.type ||
+            "Unknown"
+    );
+
+    setText(
+        "vaspConfidence",
+        vasp?.confidence ||
+            "Unknown"
+    );
+
+    setText(
+        "vaspVerified",
+        vasp?.verified
+            ? "VERIFIED"
+            : "NOT VERIFIED"
+    );
+
+    setText(
+        "vaspNote",
+        vasp?.note ||
+            "No verified VASP attribution available."
+    );
+
+}
+
+
+/* =========================================================
+   COMPLAINT
+========================================================= */
+
+function updateComplaint(
+    complaintData
+) {
+
+    const container =
+        document.getElementById(
+            "complaintContainer"
+        );
+
+    const badge =
+        document.getElementById(
+            "complaintBadge"
+        );
+
+    const records =
+        Array.isArray(
+            complaintData?.records
+        )
+            ? complaintData.records
+            : [];
+
+    const match =
+        complaintData?.match ===
+        true;
+
+    const count =
+        Number(
+            complaintData?.count ||
+            records.length
+        );
+
+    if (badge) {
+
+        badge.innerText =
+            match
+                ? `${count} MATCH${
+                      count > 1
+                          ? "ES"
+                          : ""
+                  }`
+                : "NO MATCH";
+
+        badge.className =
+            match
+                ? "badge risk-high"
+                : "badge risk-low";
+    }
+
+    if (!match) {
+
+        container.innerHTML = `
+            <div class="match-box no-match">
+
+                <div class="match-title">
+
+                    <span class="dot green"></span>
+
+                    No Complaint Match Found
+
+                </div>
+
+                <div class="match-details">
+
+                    The analyzed wallet was not found in the configured complaint records.
+
+                </div>
+
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML =
+        records
+            .map(
+                record => `
+                    <div class="match-box match-found">
+
+                        <div class="match-title">
+
+                            <span class="dot"></span>
+
+                            Complaint Match Found
+
+                        </div>
+
+                        <div class="match-details">
+
+                            <strong>Complaint ID:</strong>
+                            ${escapeHtml(
+                                record.complaint_id ||
+                                    "—"
+                            )}
+
+                            <br>
+
+                            <strong>Wallet:</strong>
+                            ${escapeHtml(
+                                record.wallet_address ||
+                                    "—"
+                            )}
+
+                            <br>
+
+                            <strong>Crime Type:</strong>
+                            ${escapeHtml(
+                                record.crime_type ||
+                                    "—"
+                            )}
+
+                            <br>
+
+                            <strong>Status:</strong>
+                            ${escapeHtml(
+                                record.status ||
+                                    "—"
+                            )}
+
+                            <br>
+
+                            <strong>Reported At:</strong>
+                            ${escapeHtml(
+                                record.reported_at ||
+                                    "—"
+                            )}
+
+                            <br>
+
+                            <strong>Description:</strong>
+                            ${escapeHtml(
+                                record.description ||
+                                    "—"
+                            )}
+
+                        </div>
+
+                    </div>
+                `
+            )
+            .join("");
+
+}
+
+
+/* =========================================================
+   INSIGHTS
+========================================================= */
+
+function updateInsights(
+    data
+) {
+    const container =
+        document.getElementById(
+            "insightsContainer"
+        );
+
+    if (!container) return;
+
+    const insights =
+        data.insights &&
+        typeof data.insights === "object"
+            ? data.insights
+            : {};
+
+    const transactions =
+        Array.isArray(data.transactions)
+            ? data.transactions
+            : [];
+
+    const received =
+        transactions.filter(
+            tx =>
+                String(
+                    tx.direction ??
+                    tx.type ??
+                    ""
+                ).toLowerCase() === "received"
+        );
+
+    const sent =
+        transactions.filter(
+            tx =>
+                String(
+                    tx.direction ??
+                    tx.type ??
+                    ""
+                ).toLowerCase() === "sent"
+        );
+
+    const receiverSet =
+        new Set(
+            sent
+                .map(tx => String(tx.to ?? "").toLowerCase())
+                .filter(Boolean)
+        );
+
+    const senderSet =
+        new Set(
+            received
+                .map(tx => String(tx.from ?? "").toLowerCase())
+                .filter(Boolean)
+        );
+
+    let rapidDetected = false;
+    let highValueDetected = false;
+
+    const sortedTransactions =
+        [...transactions].sort(
+            (a, b) =>
+                Number(a.timestamp || 0) -
+                Number(b.timestamp || 0)
+        );
+
+    for (
+        let i = 1;
+        i < sortedTransactions.length;
+        i++
+    ) {
+        const previous =
+            Number(
+                sortedTransactions[i - 1]?.timestamp || 0
+            );
+
+        const current =
+            Number(
+                sortedTransactions[i]?.timestamp || 0
+            );
+
+        if (
+            Number.isFinite(previous) &&
+            Number.isFinite(current) &&
+            Math.abs(current - previous) <= 600000
+        ) {
+            rapidDetected = true;
+            break;
+        }
+    }
+
+    for (const tx of transactions) {
+        const amount =
+            Number(
+                tx.amount ??
+                tx.value ??
+                0
+            );
+
+        if (
+            Number.isFinite(amount) &&
+            amount >= 10000
+        ) {
+            highValueDetected = true;
+            break;
+        }
+    }
+
+    const riskValue =
+        typeof data.risk === "number"
+            ? data.risk
+            : Number(
+                data.risk?.score ??
+                data.risk?.riskScore ??
+                data.riskScore ??
+                data.ruleBasedRisk?.score ??
+                data.aiMlRisk?.score ??
+                0
+            );
+
+    const valueOr =
+        (
+            backendValue,
+            fallback
+        ) =>
+            backendValue !== undefined &&
+            backendValue !== null &&
+            String(backendValue).trim() &&
+            String(backendValue) !== "No data"
+                ? backendValue
+                : fallback;
+
+    const items = [
+        [
+            "Rapid Movement",
+            valueOr(
+                insights.rapidMovement,
+                rapidDetected
+                    ? "Multiple transactions occurred within a 10-minute window."
+                    : transactions.length
+                        ? "No rapid movement pattern detected."
+                        : "No transaction data available."
+            )
+        ],
+        [
+            "Fund Splitting",
+            valueOr(
+                insights.fundSplitting,
+                receiverSet.size >= 2
+                    ? `${receiverSet.size} outgoing receiver wallet(s) detected.`
+                    : "No clear fund-splitting pattern detected."
+            )
+        ],
+        [
+            "Intermediary",
+            valueOr(
+                insights.intermediary,
+                Array.isArray(data.graph?.nodes) &&
+                data.graph.nodes.length > 2
+                    ? `${data.graph.nodes.length - 1} related wallet node(s) identified.`
+                    : "No downstream/intermediary relationship identified."
+            )
+        ],
+        [
+            "High Value",
+            valueOr(
+                insights.highValue,
+                highValueDetected
+                    ? "High-value transfer detected (≥ 10,000 USDT)."
+                    : "No high-value transfer detected."
+            )
+        ],
+        [
+            "VASP Attribution",
+            valueOr(
+                insights.vasp,
+                data.vasp?.name
+                    ? `VASP attributed: ${data.vasp.name}.`
+                    : Array.isArray(data.vaspMatches) && data.vaspMatches.length
+                        ? `${data.vaspMatches.length} VASP attribution match(es) found.`
+                        : "No verified VASP attribution returned."
+            )
+        ],
+        [
+            "Complaint Cross-Reference",
+            valueOr(
+                insights.complaint,
+                data.complaintCrossReference?.match
+                    ? `${data.complaintCrossReference.count || 0} complaint record(s) matched.`
+                    : "No matching cybercrime complaint record found."
+            )
+        ],
+        [
+            "AI/ML Risk",
+            valueOr(
+                insights.aiMlRisk,
+                Number.isFinite(Number(data.aiMlRisk?.score))
+                    ? `AI/ML statistical risk score: ${data.aiMlRisk.score}/100.`
+                    : Number.isFinite(riskValue)
+                        ? `Current risk score: ${Math.round(riskValue)}/100.`
+                        : "AI/ML risk data unavailable."
+            )
+        ]
+    ];
+
+    container.innerHTML =
+        items
+            .map(
+                item => `
+                    <div class="insight">
+                        <strong>
+                            <span class="dot orange"></span>
+                            ${escapeHtml(item[0])}
+                        </strong>
+                        <p>${escapeHtml(item[1])}</p>
+                    </div>
+                `
+            )
+            .join("");
+}
+
+
+/* =========================================================
+   ALERTS
+========================================================= */
+
+function updateAlerts(
+    data
+) {
+    const container =
+        document.getElementById(
+            "alertsContainer"
+        );
+
+    const badge =
+        document.getElementById(
+            "alertBadge"
+        );
+
+    if (!container) return;
+
+    let alerts =
+        Array.isArray(data.alerts)
+            ? [...data.alerts]
+            : [];
+
+    if (
+        alerts.length === 0 &&
+        Array.isArray(data.transactions)
+    ) {
+        for (const tx of data.transactions) {
+            const amount =
+                Number(
+                    tx.amount ??
+                    tx.value ??
+                    0
+                );
+
+            if (
+                Number.isFinite(amount) &&
+                amount >= 10000
+            ) {
+                alerts.push({
+                    title: "High-Value Transaction",
+                    message:
+                        `A transaction of ${formatNumber(amount)} USDT was detected.`,
+                    severity: "HIGH"
+                });
+                break;
+            }
+        }
+
+        for (
+            let i = 1;
+            i < data.transactions.length;
+            i++
+        ) {
+            const previous =
+                Number(
+                    data.transactions[i - 1]?.timestamp || 0
+                );
+
+            const current =
+                Number(
+                    data.transactions[i]?.timestamp || 0
+                );
+
+            if (
+                Number.isFinite(previous) &&
+                Number.isFinite(current) &&
+                Math.abs(current - previous) <= 600000
+            ) {
+                alerts.push({
+                    title: "Rapid Movement",
+                    message:
+                        "Multiple transactions were recorded within a 10-minute interval.",
+                    severity: "MEDIUM"
+                });
+                break;
+            }
+        }
+    }
+
+    if (badge) {
+        badge.innerText =
+            alerts.length
+                ? `${alerts.length} ALERT${alerts.length > 1 ? "S" : ""}`
+                : "NO ALERTS";
+    }
+
+    if (alerts.length === 0) {
+        container.innerHTML = `
+            <div class="insight">
+                <strong>
+                    <span class="dot green"></span>
+                    No automated alerts
+                </strong>
+                <p>
+                    No configured alert threshold was triggered by the available transaction data.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML =
+        alerts
+            .map(
+                alert => {
+                    const severity =
+                        String(
+                            alert.severity || "MEDIUM"
+                        ).toUpperCase();
+
+                    const dotClass =
+                        severity === "HIGH" ||
+                        severity === "CRITICAL"
+                            ? ""
+                            : "orange";
+
+                    return `
+                        <div class="insight">
+                            <strong>
+                                <span class="dot ${dotClass}"></span>
+                                ${escapeHtml(
+                                    alert.title ||
+                                    "Investigation Alert"
+                                )}
+                                <span
+                                    style="
+                                        float:right;
+                                        color:${
+                                            severity === "HIGH" ||
+                                            severity === "CRITICAL"
+                                                ? "#ff7777"
+                                                : "#f0b45c"
+                                        };
+                                        font-size:10px;
+                                    "
+                                >
+                                    ${escapeHtml(severity)}
+                                </span>
+                            </strong>
+                            <p>
+                                ${escapeHtml(
+                                    alert.message || ""
+                                )}
+                            </p>
+                        </div>
+                    `;
+                }
+            )
+            .join("");
+}
+
+
+/* =========================================================
+   TYPOLOGIES
+========================================================= */
+
+function updateTypologies(
+    data
+) {
+
+    const container =
+        document.getElementById(
+            "typologyContainer"
+        );
+
+    const typologies =
+        Array.isArray(
+            data.fraudTypologies
+        )
+            ? data.fraudTypologies
+            : [];
+
+    if (
+        typologies.length ===
+        0
+    ) {
+
+        container.innerHTML =
+            `<p class="status">
+                No typology analysis available.
+            </p>`;
+
+        return;
+    }
+
+    container.innerHTML =
+        typologies
+            .map(
+                item => {
+
+                    const text =
+                        typeof item ===
+                        "string"
+                            ? item
+                            : item.type ||
+                              "Unknown Pattern";
+
+                    const reason =
+                        typeof item ===
+                        "object"
+                            ? item.reason ||
+                              item.confidence ||
+                              ""
+                            : "";
+
+                    return `
+                        <div class="insight">
+
+                            <strong>
+
+                                <span class="dot orange"></span>
+
+                                ${escapeHtml(
+                                    text
+                                )}
+
+                            </strong>
+
+                            ${
+                                reason
+                                    ? `
+                                        <p>
+                                            ${escapeHtml(
+                                                reason
+                                            )}
+                                        </p>
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+                    `;
+                }
+            )
+            .join("");
+
+}
+
+
+/* =========================================================
+   RECOMMENDATIONS
+========================================================= */
+
+function updateRecommendations(
+    data
+) {
+
+    const container =
+        document.getElementById(
+            "recommendationsContainer"
+        );
+
+    const recommendations =
+        Array.isArray(
+            data.recommendations
+        )
+            ? data.recommendations
+            : [];
+
+    if (
+        recommendations.length ===
+        0
+    ) {
+
+        container.innerHTML =
+            `<p class="status">
+                No recommendations available.
+            </p>`;
+
+        return;
+    }
+
+    container.innerHTML =
+        recommendations
+            .map(
+                (
+                    recommendation,
+                    index
+                ) => `
+                    <div class="insight">
+
+                        <strong>
+
+                            <span class="dot green"></span>
+
+                            Action ${index + 1}
+
+                        </strong>
+
+                        <p>
+
+                            ${escapeHtml(
+                                recommendation
+                            )}
+
+                        </p>
+
+                    </div>
+                `
+            )
+            .join("");
+
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+function updateSummary(
+    data
+) {
+    const container =
+        document.getElementById(
+            "summaryContainer"
+        );
+
+    if (!container) return;
+
+    const summary =
+        data.investigationSummary &&
+        typeof data.investigationSummary === "object"
+            ? data.investigationSummary
+            : {};
+
+    const transactions =
+        Array.isArray(data.transactions)
+            ? data.transactions
+            : [];
+
+    const stats =
+        data.transactionStats ||
+        data.statistics ||
+        {};
+
+    const riskScore =
+        typeof data.risk === "number"
+            ? data.risk
+            : Number(
+                data.risk?.score ??
+                data.risk?.riskScore ??
+                data.riskScore ??
+                data.ruleBasedRisk?.score ??
+                data.aiMlRisk?.score ??
+                summary.riskScore ??
+                0
+            );
+
+    const incoming =
+        summary.incomingTransactions ??
+        stats.incomingTransactions ??
+        stats.receivedCount ??
+        transactions.filter(
+            tx =>
+                String(
+                    tx.direction ??
+                    tx.type ??
+                    ""
+                ).toLowerCase() === "received"
+        ).length;
+
+    const outgoing =
+        summary.outgoingTransactions ??
+        stats.outgoingTransactions ??
+        stats.sentCount ??
+        transactions.filter(
+            tx =>
+                String(
+                    tx.direction ??
+                    tx.type ??
+                    ""
+                ).toLowerCase() === "sent"
+        ).length;
+
+    const typologies =
+        Array.isArray(summary.typologies)
+            ? summary.typologies.join(", ")
+            : Array.isArray(data.fraudTypologies)
+                ? data.fraudTypologies
+                    .map(
+                        item =>
+                            typeof item === "string"
+                                ? item
+                                : item?.type || "Unknown Pattern"
+                    )
+                    .join(", ")
+                : "—";
+
+    const vaspName =
+        summary.vasp ||
+        data.vasp?.name ||
+        (
+            Array.isArray(data.vaspMatches) &&
+            data.vaspMatches.length
+                ? (
+                    data.vaspMatches[0]?.vasp ||
+                    data.vaspMatches[0]?.name ||
+                    "VASP Attributed"
+                )
+                : "No VASP Identified"
+        );
+
+    const complaintMatch =
+        summary.complaintMatch ??
+        Boolean(
+            data.complaintCrossReference?.match
+        );
+
+    const complaintCount =
+        summary.complaintCount ??
+        data.complaintCrossReference?.count ??
+        0;
+
+    const aiMlScore =
+        summary.aiMlRiskScore ??
+        data.aiMlRisk?.score ??
+        "—";
+
+    container.innerText =
+`ChainTrace AI Investigation Report
+
+Wallet:
+${data.wallet || "—"}
+
+Blockchain:
+${data.blockchain || "TRON"}
+
+Token:
+${data.token || "USDT"}
+
+Risk Score:
+${
+    Number.isFinite(riskScore)
+        ? `${Math.round(riskScore)}/100`
+        : "—"
+}
+
+Risk Classification:
+${
+    data.riskText ||
+    data.risk?.classification ||
+    data.risk?.level ||
+    summary.classification ||
+    "—"
+}
+
+Transactions:
+${
+    summary.transactionCount ??
+    stats.totalTransactions ??
+    transactions.length
+}
+
+Incoming Transactions:
+${incoming}
+
+Outgoing Transactions:
+${outgoing}
+
+Downstream Wallets:
+${
+    summary.downstreamWallets ??
+    (
+        Array.isArray(data.graph?.nodes)
+            ? Math.max(
+                0,
+                data.graph.nodes.length - 1
+            )
+            : 0
+    )
+}
+
+Alerts:
+${
+    summary.alerts ??
+    (
+        Array.isArray(data.alerts)
+            ? data.alerts.length
+            : 0
+    )
+}
+
+Fraud Typologies:
+${typologies}
+
+VASP:
+${vaspName}
+
+Cybercrime Complaint Match:
+${
+    complaintMatch
+        ? `YES — ${complaintCount} record(s)`
+        : "NO"
+}
+
+AI/ML Score:
+${aiMlScore}
+
+Generated:
+${
+    data.generatedAt ||
+    summary.generatedAt ||
+    "—"
+}`;
+}
+
+
+/* =========================================================
+   TRANSACTIONS
+========================================================= */
+
+function getTransactionSearchText(tx) {
+    return [
+        tx?.type,
+        tx?.direction,
+        tx?.amount,
+        tx?.token,
+        tx?.from,
+        tx?.to,
+        tx?.hash,
+        tx?.txHash,
+        tx?.transactionHash,
+        tx?.timestamp,
+        tx?.blockNumber
+    ]
+        .filter(value => value !== undefined && value !== null)
+        .join(" ")
+        .toLowerCase();
+}
+
+function updateTransactionSearchMeta(visibleCount, totalCount, query = "") {
+    const meta = document.getElementById("transactionSearchMeta");
+    if (!meta) return;
+
+    if (!totalCount) {
+        meta.textContent = "Search across all loaded transactions";
+        return;
+    }
+
+    const isAllDepth =
+        document.getElementById("depthInput")?.value === "all";
+
+    if (!query) {
+        const visible = isAllDepth
+            ? totalCount
+            : Math.min(totalCount, MAX_VISIBLE_TRANSACTION_ROWS);
+
+        meta.innerHTML = isAllDepth
+            ? `<strong>${totalCount.toLocaleString()}</strong> transactions loaded • ALL depth selected`
+            : totalCount > MAX_VISIBLE_TRANSACTION_ROWS
+                ? `<strong>${totalCount.toLocaleString()}</strong> total transactions • showing first <strong>${visible.toLocaleString()}</strong> • search to find any address`
+                : `<strong>${totalCount.toLocaleString()}</strong> transactions loaded`;
+        return;
+    }
+
+    meta.innerHTML = `<strong>${visibleCount.toLocaleString()}</strong> match${visibleCount === 1 ? "" : "es"} for <strong>${escapeHtml(query)}</strong>`;
+}
+
+function applyTransactionSearch(query = "") {
+    const normalizedQuery = String(query || "").trim().toLowerCase();
+
+    const filtered = normalizedQuery
+        ? allTransactionRows.filter(tx => getTransactionSearchText(tx).includes(normalizedQuery))
+        : allTransactionRows;
+
+    updateTransactionSearchMeta(
+        filtered.length,
+        allTransactionRows.length,
+        normalizedQuery
+    );
+
+    renderTransactionRows(filtered);
+}
+
+function renderTransactionRows(transactions) {
+    const container = document.getElementById("transactionBody");
+    if (!container) return;
+
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="6" style="color:#8297a3;">
+                    No matching transactions found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const isAllDepth =
+        document.getElementById("depthInput")?.value === "all";
+
+    const visibleTransactions = isAllDepth
+        ? transactions
+        : transactions.slice(0, MAX_VISIBLE_TRANSACTION_ROWS);
+
+    container.innerHTML = "";
+
+    visibleTransactions.forEach(tx => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td class="${
+                tx.type === "Received"
+                    ? "risk-low"
+                    : "risk-high"
+            }">
+                ${escapeHtml(
+                    tx.type ||
+                    tx.direction ||
+                    (
+                        String(tx.to || "").toLowerCase() ===
+                        String(latestAnalysis?.wallet || "").toLowerCase()
+                            ? "Received"
+                            : String(tx.from || "").toLowerCase() ===
+                              String(latestAnalysis?.wallet || "").toLowerCase()
+                                ? "Sent"
+                                : "Unknown"
+                    )
+                )}
+            </td>
+
+            <td>
+                ${formatNumber(tx.amount)}
+                ${escapeHtml(tx.token || latestAnalysis?.token || "USDT")}
+            </td>
+
+            <td>
+                ${
+                    tx.fromExplorerUrl
+                        ? `
+                            <a
+                                href="${tx.fromExplorerUrl}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="${escapeHtml(tx.from || "")}" 
+                            >
+                                ${escapeHtml(tx.from || "—")}
+                            </a>
+                        `
+                        : escapeHtml(tx.from || "—")
+                }
+            </td>
+
+            <td>
+                ${
+                    tx.toExplorerUrl
+                        ? `
+                            <a
+                                href="${tx.toExplorerUrl}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="${escapeHtml(tx.to || "")}" 
+                            >
+                                ${escapeHtml(tx.to || "—")}
+                            </a>
+                        `
+                        : escapeHtml(tx.to || "—")
+                }
+            </td>
+
+            <td>
+                ${escapeHtml(tx.timestamp || "—")}
+            </td>
+
+            <td>
+                ${
+                    tx.explorerUrl
+                        ? `
+                            <a
+                                href="${tx.explorerUrl}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                ${
+                                    String(latestAnalysis?.blockchain || "tron").toLowerCase() === "ethereum"
+                                        ? "ETHERSCAN"
+                                        : String(latestAnalysis?.blockchain || "tron").toLowerCase() === "bnb"
+                                            ? "BSCSCAN"
+                                            : String(latestAnalysis?.blockchain || "tron").toLowerCase() === "solana"
+                                                ? "SOLSCAN"
+                                                : "TRONSCAN"
+                                }
+                            </a>
+                        `
+                        : "—"
+                }
+            </td>
+        `;
+
+        container.appendChild(row);
+    });
+
+    if (!isAllDepth && transactions.length > MAX_VISIBLE_TRANSACTION_ROWS) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td colspan="6" style="color:#8297a3; padding:12px;">
+                Showing first <strong>${MAX_VISIBLE_TRANSACTION_ROWS.toLocaleString()}</strong>
+                of <strong>${transactions.length.toLocaleString()}</strong> matching transactions.
+                Refine the search to narrow the result.
+            </td>
+        `;
+        container.appendChild(row);
+    }
+}
+
+function renderTransactions(transactions) {
+    allTransactionRows = Array.isArray(transactions) ? transactions : [];
+
+    const searchInput = document.getElementById("transactionSearchInput");
+    if (searchInput) searchInput.value = "";
+
+    updateTransactionSearchMeta(
+        allTransactionRows.length,
+        allTransactionRows.length,
+        ""
+    );
+
+    renderTransactionRows(allTransactionRows);
+}
+
+
+
+/* =========================================================
+   GRAPH
+========================================================= */
+
+
+function getGraphAddressDetails(address, flows) {
+    const key = String(address || "").toLowerCase();
+    const related = flows.filter(tx =>
+        String(tx.from || "").toLowerCase() === key ||
+        String(tx.to || "").toLowerCase() === key
+    );
+
+    let sent = 0;
+    let received = 0;
+    const counterparties = new Map();
+
+    for (const tx of related) {
+        const amount = Number(tx.amount) || 0;
+        const fromKey = String(tx.from || "").toLowerCase();
+        const toKey = String(tx.to || "").toLowerCase();
+        if (fromKey === key) {
+            sent += amount;
+            const cp = String(tx.to || "");
+            const cpKey = cp.toLowerCase();
+            const item = counterparties.get(cpKey) || { address: cp, amount: 0, count: 0, direction: "OUT" };
+            item.amount += amount;
+            item.count += 1;
+            counterparties.set(cpKey, item);
+        }
+        if (toKey === key) {
+            received += amount;
+            const cp = String(tx.from || "");
+            const cpKey = cp.toLowerCase();
+            const item = counterparties.get(cpKey) || { address: cp, amount: 0, count: 0, direction: "IN" };
+            item.amount += amount;
+            item.count += 1;
+            counterparties.set(cpKey, item);
+        }
+    }
+
+    const topCounterparties = Array.from(counterparties.values())
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 12);
+
+    return {
+        address: String(address || ""),
+        related,
+        sent,
+        received,
+        totalFlow: sent + received,
+        txCount: related.length,
+        topCounterparties
+    };
+}
+
+function explorerLinkHtml(url, label) {
+    if (!url) return escapeHtml(label || "View");
+    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label || "View")}</a>`;
+}
+
+function renderGraphAddressDetail(address, flows, meta, overlay) {
+    if (!overlay) return;
+
+    const detail = getGraphAddressDetails(address, flows);
+    const role = meta?.role || "related wallet";
+    const vasp = meta?.vasp;
+    const roleLabel = role === "suspect"
+        ? "INVESTIGATED WALLET"
+        : role === "sender"
+            ? "SOURCE / SENDER"
+            : role === "receiver"
+                ? "DESTINATION / RECEIVER"
+                : vasp
+                    ? `VASP · ${vasp.category || vasp.type || "Attributed"}`
+                    : "RELATED WALLET";
+
+    const txRows = detail.related
+        .slice()
+        .sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || "")))
+        .slice(0, 50)
+        .map(tx => `
+            <tr>
+                <td>${escapeHtml(String(tx.amount ?? 0))} USDT</td>
+                <td>${escapeHtml(shortenAddress(tx.from))}</td>
+                <td>${escapeHtml(shortenAddress(tx.to))}</td>
+                <td>${escapeHtml(String(tx.timestamp || "—"))}</td>
+                <td>${tx.explorerUrl ? explorerLinkHtml(tx.explorerUrl, shortenAddress(tx.hash || "Open")) : escapeHtml(shortenAddress(tx.hash || "—"))}</td>
+            </tr>
+        `).join("");
+
+    const counterpartyRows = detail.topCounterparties.map(cp => `
+        <tr>
+            <td>${escapeHtml(cp.direction)}</td>
+            <td>${escapeHtml(cp.address)}</td>
+            <td>${escapeHtml(formatNumber(cp.amount))} USDT</td>
+            <td>${escapeHtml(cp.count.toLocaleString())}</td>
+        </tr>
+    `).join("");
+
+    overlay.innerHTML = `
+        <div class="graph-detail-head">
+            <div>
+                <div class="graph-detail-title">${escapeHtml(vasp?.name || roleLabel)}</div>
+                <div class="graph-detail-role">${escapeHtml(roleLabel)}</div>
+            </div>
+            <button type="button" class="graph-detail-close" data-graph-close>✕</button>
+        </div>
+
+        <div class="graph-detail-address">${escapeHtml(detail.address)}</div>
+
+        <div class="graph-detail-grid">
+            <div class="graph-detail-card"><small>Transactions</small><strong>${detail.txCount.toLocaleString()}</strong></div>
+            <div class="graph-detail-card"><small>Total Flow</small><strong>${formatNumber(detail.totalFlow)} USDT</strong></div>
+            <div class="graph-detail-card"><small>Total Sent</small><strong>${formatNumber(detail.sent)} USDT</strong></div>
+            <div class="graph-detail-card"><small>Total Received</small><strong>${formatNumber(detail.received)} USDT</strong></div>
+            <div class="graph-detail-card"><small>VASP</small><strong>${escapeHtml(vasp?.name || "Not attributed")}</strong></div>
+            <div class="graph-detail-card"><small>Verified</small><strong>${escapeHtml(String(vasp?.verified ?? "—"))}</strong></div>
+        </div>
+
+        ${vasp ? `
+            <div class="graph-detail-section-title">Attribution</div>
+            <div class="graph-detail-address">
+                <strong>${escapeHtml(vasp.name || vasp.vasp || "Attributed VASP")}</strong><br>
+                Type: ${escapeHtml(vasp.category || vasp.type || "—")}<br>
+                Confidence: ${escapeHtml(vasp.confidence || "—")}<br>
+                Source: ${escapeHtml(vasp.source || "—")}
+            </div>
+        ` : ""}
+
+        <div class="graph-detail-section-title">Top Counterparties</div>
+        ${counterpartyRows ? `
+            <table class="graph-detail-table">
+                <thead><tr><th>Dir</th><th>Address</th><th>Volume</th><th>TX</th></tr></thead>
+                <tbody>${counterpartyRows}</tbody>
+            </table>
+        ` : `<div class="graph-detail-muted">No counterparty records.</div>`}
+
+        <div class="graph-detail-section-title">Related Transactions (up to 50 shown)</div>
+        ${txRows ? `
+            <table class="graph-detail-table">
+                <thead><tr><th>Amount</th><th>From</th><th>To</th><th>Time</th><th>TX</th></tr></thead>
+                <tbody>${txRows}</tbody>
+            </table>
+        ` : `<div class="graph-detail-muted">No transactions found for this address.</div>`}
+
+        <div class="graph-detail-muted" style="margin-top:10px;">
+            Click ✕, click any empty graph area, or press Escape to close. The full address above is selectable/copyable.
+        </div>
+    `;
+    overlay.classList.add("visible");
+
+    const close = overlay.querySelector("[data-graph-close]");
+    if (close) {
+        close.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            overlay.classList.remove("visible");
+        });
+    }
+}
+
+function renderGraph(graph) {
+
+    const container = document.getElementById("graphContainer");
+    if (!container) return;
+
+    const wallet = String(latestAnalysis?.wallet || "");
+    const walletKey = wallet.toLowerCase();
+
+    const transactions = Array.isArray(latestAnalysis?.transactions)
+        ? latestAnalysis.transactions
+        : [];
+
+    const backendEdges = Array.isArray(graph?.edges) ? graph.edges : [];
+
+    let flows = transactions.map(tx => ({
+        from: tx.from ?? tx.from_address ?? "",
+        to: tx.to ?? tx.to_address ?? "",
+        amount: Number(tx.amount ?? tx.value ?? 0),
+        hash: tx.hash ?? tx.transaction_id ?? tx.txID ?? tx.txHash ?? "",
+        timestamp: tx.timestamp ?? tx.date ?? "",
+        explorerUrl: tx.explorerUrl ?? tx.explorer_url ?? tx.transactionUrl ?? ""
+    })).filter(x => x.from && x.to);
+
+    if (!flows.length) {
+        flows = backendEdges.map(edge => ({
+            from: edge.from ?? edge.source ?? "",
+            to: edge.to ?? edge.target ?? "",
+            amount: Number(edge.amount ?? edge.value ?? 0),
+            hash: edge.hash ?? edge.txHash ?? "",
+            timestamp: edge.timestamp ?? "",
+            explorerUrl: edge.explorerUrl ?? edge.explorer_url ?? ""
+        })).filter(x => x.from && x.to);
+    }
+
+    if (!flows.length) {
+        container.innerHTML = `<div class="graph-empty">No sender / receiver relationships were returned for this investigation.</div>`;
+        return;
+    }
+
+    // Keep every real transaction in the counts. Only the visual layout is reduced.
+    const seen = new Set();
+    flows = flows.filter(flow => {
+        const key = [flow.from, flow.to, flow.amount, flow.hash, flow.timestamp]
+            .map(v => String(v).toLowerCase()).join("|");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
+    const rawTransactionCount = flows.length;
+
+    // Aggregate repeated sender -> receiver transfers.
+    const pairMap = new Map();
+    for (const flow of flows) {
+        const from = String(flow.from);
+        const to = String(flow.to);
+        const key = `${from.toLowerCase()}|${to.toLowerCase()}`;
+        if (!pairMap.has(key)) {
+            pairMap.set(key, {
+                from,
+                to,
+                amount: 0,
+                count: 0,
+                hashes: [],
+                latestTimestamp: flow.timestamp || ""
+            });
+        }
+        const pair = pairMap.get(key);
+        if (Number.isFinite(flow.amount)) pair.amount += flow.amount;
+        pair.count += 1;
+        if (flow.hash) pair.hashes.push(String(flow.hash));
+        if (flow.timestamp) pair.latestTimestamp = flow.timestamp;
+    }
+
+    const allPairs = Array.from(pairMap.values());
+
+    // Fixed-size viewport. This prevents the previous giant vertical SVG/collapsed-line problem.
+    const LARGE_DATA = rawTransactionCount > 300 || allPairs.length > 180;
+    const MAX_VISIBLE_RELATIONSHIPS = LARGE_DATA ? 140 : 180;
+    const MAX_SIDE_NODES = LARGE_DATA ? 28 : 36;
+    const MAX_OTHER_NODES = LARGE_DATA ? 16 : 24;
+
+    const vaspEntries = Array.isArray(latestAnalysis?.vaspMatches)
+        ? latestAnalysis.vaspMatches
+        : Array.isArray(latestAnalysis?.vasp_attribution)
+            ? latestAnalysis.vasp_attribution
+            : [];
+
+    const vaspMap = new Map();
+    for (const entry of vaspEntries) {
+        const address = entry?.address ?? entry?.wallet_address ?? entry?.wallet ?? "";
+        if (address) vaspMap.set(String(address).toLowerCase(), entry);
+    }
+
+    // Prioritise relationships touching the investigated wallet, then highest count/amount.
+    allPairs.sort((a, b) => {
+        const aDirect = (a.from.toLowerCase() === walletKey || a.to.toLowerCase() === walletKey) ? 1 : 0;
+        const bDirect = (b.from.toLowerCase() === walletKey || b.to.toLowerCase() === walletKey) ? 1 : 0;
+        if (bDirect !== aDirect) return bDirect - aDirect;
+        if (b.count !== a.count) return b.count - a.count;
+        return b.amount - a.amount;
+    });
+
+    const visiblePairs = allPairs.slice(0, MAX_VISIBLE_RELATIONSHIPS);
+    const hiddenPairs = allPairs.slice(MAX_VISIBLE_RELATIONSHIPS);
+    const hiddenTransactionCount = hiddenPairs.reduce((sum, pair) => sum + pair.count, 0);
+
+    // Build compact node set from visible relationships, but cap each side.
+    const senderCandidates = [];
+    const receiverCandidates = [];
+    const otherCandidates = [];
+    const seenNode = new Set();
+
+    for (const pair of visiblePairs) {
+        const fromKey = pair.from.toLowerCase();
+        const toKey = pair.to.toLowerCase();
+        if (toKey === walletKey && !seenNode.has(fromKey)) {
+            senderCandidates.push(pair.from); seenNode.add(fromKey);
+        } else if (fromKey === walletKey && !seenNode.has(toKey)) {
+            receiverCandidates.push(pair.to); seenNode.add(toKey);
+        } else {
+            if (fromKey !== walletKey && !seenNode.has(fromKey)) { otherCandidates.push(pair.from); seenNode.add(fromKey); }
+            if (toKey !== walletKey && !seenNode.has(toKey)) { otherCandidates.push(pair.to); seenNode.add(toKey); }
+        }
+    }
+
+    const leftNodes = senderCandidates.slice(0, MAX_SIDE_NODES);
+    const rightNodes = receiverCandidates.slice(0, MAX_SIDE_NODES);
+    const otherNodes = otherCandidates.slice(0, MAX_OTHER_NODES);
+
+    const displayedAddresses = [wallet, ...leftNodes, ...rightNodes, ...otherNodes]
+        .filter(Boolean)
+        .filter((v, i, arr) => arr.findIndex(x => x.toLowerCase() === v.toLowerCase()) === i);
+
+    // If capping nodes removed endpoints, only draw relationships whose endpoints are visible.
+    const addressSet = new Set(displayedAddresses.map(a => a.toLowerCase()));
+    const drawablePairs = visiblePairs.filter(pair =>
+        addressSet.has(pair.from.toLowerCase()) && addressSet.has(pair.to.toLowerCase())
+    );
+
+    const nodeStats = new Map();
+    const ensureStat = address => {
+        const key = String(address).toLowerCase();
+        if (!nodeStats.has(key)) nodeStats.set(key, { address: String(address), sent: 0, received: 0, txCount: 0 });
+        return nodeStats.get(key);
+    };
+
+    // Stats are based on ALL real pairs, not just what is drawn.
+    for (const pair of allPairs) {
+        const amount = Number(pair.amount) || 0;
+        const a = ensureStat(pair.from);
+        const b = ensureStat(pair.to);
+        a.sent += amount; a.txCount += pair.count;
+        b.received += amount; b.txCount += pair.count;
+    }
+    ensureStat(wallet);
+
+    const width = 1800;
+    const height = 820;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const positions = new Map([[walletKey, { x: centerX, y: centerY }]]);
+
+    function placeStack(list, x) {
+        if (!list.length) return;
+        const top = 115;
+        const bottom = height - 115;
+        const step = list.length === 1 ? 0 : (bottom - top) / (list.length - 1);
+        list.forEach((address, index) => positions.set(address.toLowerCase(), {
+            x,
+            y: list.length === 1 ? centerY : top + index * step
+        }));
+    }
+
+    placeStack(leftNodes, 260);
+    placeStack(rightNodes, width - 260);
+
+    otherNodes.forEach((address, index) => {
+        const col = index < 8 ? 0 : 1;
+        const row = index % 8;
+        positions.set(address.toLowerCase(), {
+            x: col === 0 ? 680 : 1120,
+            y: 125 + row * 82
+        });
+    });
+
+    const maxAmount = Math.max(...drawablePairs.map(p => Number(p.amount) || 0), 1);
+    const maxCount = Math.max(...drawablePairs.map(p => Number(p.count) || 0), 1);
+    const uid = `graph_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const roleOf = address => {
+        const key = address.toLowerCase();
+        if (key === walletKey) return "suspect";
+        if (vaspMap.has(key)) return "vasp";
+        if (senderCandidates.some(a => a.toLowerCase() === key)) return "sender";
+        if (receiverCandidates.some(a => a.toLowerCase() === key)) return "receiver";
+        return "other";
+    };
+
+    const edgeMarkup = drawablePairs.map((pair, index) => {
+        const from = positions.get(pair.from.toLowerCase());
+        const to = positions.get(pair.to.toLowerCase());
+        if (!from || !to) return "";
+
+        const amount = Number(pair.amount) || 0;
+        const count = Number(pair.count) || 0;
+        const ratio = Math.min(amount / maxAmount, 1);
+        const countRatio = Math.min(count / maxCount, 1);
+        const stroke = 1.6 + ratio * 3.4 + countRatio * 2.2;
+        const riskClass = amount >= 10000 || count >= 25 ? "high" : amount >= 1000 || count >= 10 ? "medium" : "";
+
+        const midX = (from.x + to.x) / 2;
+        const bend = from.x === to.x ? 0 : Math.max(35, Math.min(110, Math.abs(to.x - from.x) * .16));
+        const direction = to.x >= from.x ? 1 : -1;
+        const d = `M ${from.x} ${from.y} C ${midX - bend * direction} ${from.y}, ${midX + bend * direction} ${to.y}, ${to.x} ${to.y}`;
+
+        return `
+            <g class="graph-edge-group">
+                <title>${escapeHtml(pair.from)} → ${escapeHtml(pair.to)} | ${escapeHtml(`${formatNumber(amount)} USDT`)} | ${escapeHtml(`${count} transaction${count === 1 ? "" : "s"}`)}</title>
+                <path class="graph-edge-glow" d="${d}" style="stroke-width:${Math.max(4, stroke + 3)}px"></path>
+                <path class="graph-edge-pro ${riskClass}" d="${d}" style="stroke-width:${stroke}px" marker-end="url(#${uid}_arrow)"></path>
+                ${!LARGE_DATA ? `<circle class="graph-edge-flow ${riskClass === "high" ? "high" : ""}" r="4"><animateMotion dur="${2.6 + (index % 5) * .42}s" repeatCount="indefinite" path="${d}"></animateMotion></circle>` : ""}
+                <g class="graph-edge-label-group">
+                    <rect x="${midX - 72}" y="${(from.y + to.y) / 2 - 27}" width="144" height="38" rx="7" fill="#061017" fill-opacity=".92" stroke="#18313d"></rect>
+                    <text class="graph-edge-label-pro" x="${midX}" y="${(from.y + to.y) / 2 - 11}" text-anchor="middle">${escapeHtml(`${formatNumber(amount)} USDT`)}</text>
+                    <text class="graph-edge-hash-pro" x="${midX}" y="${(from.y + to.y) / 2 + 4}" text-anchor="middle">${escapeHtml(`${count} tx`)}</text>
+                </g>
+            </g>`;
+    }).join("");
+
+    const nodeMarkup = displayedAddresses.map(address => {
+        const pos = positions.get(address.toLowerCase());
+        if (!pos) return "";
+        const stat = nodeStats.get(address.toLowerCase()) || { sent: 0, received: 0, txCount: 0 };
+        const role = roleOf(address);
+        const vasp = vaspMap.get(address.toLowerCase());
+        const totalFlow = stat.sent + stat.received;
+        const size = role === "suspect" ? { w: 300, h: 150 } : { w: 220, h: 112 };
+        const left = pos.x - size.w / 2;
+        const top = pos.y - size.h / 2;
+        const title = role === "suspect" ? "INVESTIGATED WALLET" : vasp?.name || vasp?.vasp || (role === "sender" ? "SOURCE / SENDER" : role === "receiver" ? "DESTINATION / RECEIVER" : "COUNTERPARTY");
+        const roleText = role === "suspect" ? "Investigation Target" : vasp ? `VASP · ${vasp.category || vasp.type || "Attributed"}` : role === "sender" ? "Incoming source" : role === "receiver" ? "Outgoing destination" : "Related wallet";
+        const cls = role === "suspect" ? "suspect" : role;
+        return `
+            <g class="graph-node-pro" data-node-key="${escapeHtml(address.toLowerCase())}" tabindex="0" role="button" aria-label="Open full details for ${escapeHtml(address)}">
+                ${role === "suspect" ? `<circle class="graph-center-ring" cx="${pos.x}" cy="${pos.y}" r="88"></circle>` : ""}
+                <rect class="graph-node-bg ${cls}" x="${left}" y="${top}" width="${size.w}" height="${size.h}" rx="14"></rect>
+                <circle class="graph-node-dot ${cls}" cx="${left + 20}" cy="${top + 20}" r="${role === "suspect" ? 6 : 5}"></circle>
+                <text class="graph-node-title-pro" x="${left + 34}" y="${top + 24}">${escapeHtml(title)}</text>
+                <text class="graph-node-address-pro" x="${left + 14}" y="${top + 49}">${escapeHtml(shortenAddress(address))}</text>
+                <text class="graph-node-role-pro" x="${left + 14}" y="${top + 70}">${escapeHtml(roleText)}</text>
+                <text class="graph-node-flow-pro" x="${left + 14}" y="${top + 92}">${escapeHtml(`${formatNumber(totalFlow)} USDT`)}</text>
+                <text class="graph-node-tx-pro" x="${left + size.w - 14}" y="${top + 92}" text-anchor="end">${escapeHtml(`${stat.txCount.toLocaleString()} tx`)}</text>
+            </g>`;
+    }).join("");
+
+    const totalFlow = allPairs.reduce((sum, pair) => sum + (Number(pair.amount) || 0), 0);
+    const senderCount = new Set(allPairs.filter(p => p.to.toLowerCase() === walletKey).map(p => p.from.toLowerCase())).size;
+    const receiverCount = new Set(allPairs.filter(p => p.from.toLowerCase() === walletKey).map(p => p.to.toLowerCase())).size;
+    const riskValue = typeof latestAnalysis?.risk === "number"
+        ? latestAnalysis.risk
+        : Number(latestAnalysis?.risk?.score ?? latestAnalysis?.risk?.riskScore ?? latestAnalysis?.riskScore ?? 0);
+
+    const modeLabel = LARGE_DATA ? "ADAPTIVE COMPACT" : "FULL DETAIL";
+    const omittedRelationshipCount = Math.max(0, allPairs.length - drawablePairs.length);
+
+    container.innerHTML = `
+        <div class="graph-advanced ${LARGE_DATA ? "graph-density-mode" : ""}">
+            <div class="graph-toolbar-pro">
+                <div class="graph-stat-pro"><small>All Transactions</small><strong>${rawTransactionCount.toLocaleString()}</strong></div>
+                <div class="graph-stat-pro"><small>All Relationships</small><strong>${allPairs.length.toLocaleString()}</strong></div>
+                <div class="graph-stat-pro"><small>Drawn Relationships</small><strong>${drawablePairs.length.toLocaleString()}</strong></div>
+                <div class="graph-stat-pro"><small>Wallet Nodes</small><strong>${displayedAddresses.length.toLocaleString()}</strong></div>
+                <div class="graph-stat-pro"><small>Senders</small><strong>${senderCount.toLocaleString()}</strong></div>
+                <div class="graph-stat-pro"><small>Receivers</small><strong>${receiverCount.toLocaleString()}</strong></div>
+                <div class="graph-stat-pro"><small>Total Flow</small><strong>${formatNumber(totalFlow)} USDT</strong></div>
+                <div class="graph-stat-pro"><small>Render Mode</small><strong>${modeLabel}</strong></div>
+            </div>
+
+            <div class="graph-density-note">
+                ${rawTransactionCount.toLocaleString()} real transactions are counted. Repeated sender → receiver transfers are grouped.
+                ${omittedRelationshipCount > 0 ? `${omittedRelationshipCount.toLocaleString()} relationships are omitted from the visual layout only so the graph stays readable.` : "All relationships fit in the visual layout."}
+                ${hiddenTransactionCount > 0 ? ` ${hiddenTransactionCount.toLocaleString()} transactions are inside grouped relationships.` : ""}
+            </div>
+
+            <div class="graph-zoom-bar">
+                <button type="button" data-zoom-out="1" title="Zoom out">−</button>
+                <button type="button" data-zoom-reset="1" title="Reset zoom">100%</button>
+                <button type="button" data-zoom-in="1" title="Zoom in">+</button>
+                <button type="button" data-zoom-fit="1" title="Fit graph">FIT</button>
+                <span class="graph-zoom-level" data-zoom-level="1">100%</span>
+                <span class="graph-zoom-help">Mouse wheel / trackpad = zoom • drag empty graph = pan</span>
+            </div>
+
+            <div class="graph-stage-pro graph-zoom-enabled" style="min-height:${height + 20}px;">
+                <div class="graph-zoom-viewport" data-zoom-viewport="1">
+                    <div class="graph-zoom-content" data-zoom-content="1">
+                <div id="${uid}_detail" class="graph-detail-overlay" aria-live="polite"></div>
+                <svg class="graph-svg-pro" viewBox="0 0 ${width} ${height}" role="img" aria-label="Adaptive blockchain sender receiver fund flow graph">
+                    <defs>
+                        <filter id="${uid}_shadow" x="-30%" y="-30%" width="160%" height="160%">
+                            <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity=".55"></feDropShadow>
+                        </filter>
+                        <marker id="${uid}_arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+                            <path d="M0,0 L0,10 L10,5 z" fill="#26738e"></path>
+                        </marker>
+                    </defs>
+
+                    <line x1="${centerX}" y1="50" x2="${centerX}" y2="${height - 50}" stroke="#17313d" stroke-dasharray="5 8" opacity=".65"></line>
+                    <text class="graph-lane-label-pro" x="260" y="45" text-anchor="middle">INCOMING / SOURCES</text>
+                    <text class="graph-lane-label-pro" x="${centerX}" y="45" text-anchor="middle">INVESTIGATION TARGET</text>
+                    <text class="graph-lane-label-pro" x="${width - 260}" y="45" text-anchor="middle">OUTGOING / DESTINATIONS</text>
+
+                    ${edgeMarkup}
+                    ${nodeMarkup}
+                </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-legend-pro">
+                <span><i></i> Sender / source</span>
+                <span><i class="receiver"></i> Receiver / destination</span>
+                <span><i class="suspect"></i> Investigated wallet</span>
+                <span><i class="vasp"></i> VASP attribution</span>
+                <span>Line thickness = amount + transaction density</span>
+            </div>
+        </div>
+    `;
+
+    // ===== GRAPH ZOOM / PAN =====
+    const zoomViewport = container.querySelector('[data-zoom-viewport="1"]');
+    const zoomContent = container.querySelector('[data-zoom-content="1"]');
+    const zoomLevel = container.querySelector('[data-zoom-level="1"]');
+    const zoomInBtn = container.querySelector('[data-zoom-in="1"]');
+    const zoomOutBtn = container.querySelector('[data-zoom-out="1"]');
+    const zoomResetBtn = container.querySelector('[data-zoom-reset="1"]');
+    const zoomFitBtn = container.querySelector('[data-zoom-fit="1"]');
+
+    let graphZoom = 1;
+    const MIN_ZOOM = 0.35;
+    const MAX_ZOOM = 3.0;
+    const ZOOM_STEP = 1.2;
+
+    const applyZoom = (nextZoom, focusX = null, focusY = null) => {
+        if (!zoomViewport || !zoomContent) return;
+        const oldZoom = graphZoom;
+        graphZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
+
+        if (focusX !== null && focusY !== null) {
+            const beforeX = (zoomViewport.scrollLeft + focusX) / oldZoom;
+            const beforeY = (zoomViewport.scrollTop + focusY) / oldZoom;
+            zoomContent.style.transform = `scale(${graphZoom})`;
+            zoomViewport.scrollLeft = Math.max(0, beforeX * graphZoom - focusX);
+            zoomViewport.scrollTop = Math.max(0, beforeY * graphZoom - focusY);
+        } else {
+            zoomContent.style.transform = `scale(${graphZoom})`;
+        }
+
+        if (zoomLevel) zoomLevel.textContent = `${Math.round(graphZoom * 100)}%`;
+    };
+
+    if (zoomContent) {
+        zoomContent.style.transformOrigin = '0 0';
+    }
+
+    zoomInBtn?.addEventListener('click', () => applyZoom(graphZoom * ZOOM_STEP));
+    zoomOutBtn?.addEventListener('click', () => applyZoom(graphZoom / ZOOM_STEP));
+    zoomResetBtn?.addEventListener('click', () => {
+        if (zoomViewport) { zoomViewport.scrollLeft = 0; zoomViewport.scrollTop = 0; }
+        applyZoom(1);
+    });
+    zoomFitBtn?.addEventListener('click', () => {
+        if (!zoomViewport) return;
+        const fitX = zoomViewport.clientWidth / width;
+        const fitY = zoomViewport.clientHeight / height;
+        const fit = Math.min(fitX, fitY, 1);
+        if (zoomViewport) { zoomViewport.scrollLeft = 0; zoomViewport.scrollTop = 0; }
+        applyZoom(Math.max(MIN_ZOOM, fit));
+    });
+
+    zoomViewport?.addEventListener('wheel', event => {
+        event.preventDefault();
+        const rect = zoomViewport.getBoundingClientRect();
+        const focusX = event.clientX - rect.left;
+        const focusY = event.clientY - rect.top;
+        const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
+        applyZoom(graphZoom * factor, focusX, focusY);
+    }, { passive: false });
+
+    let panStart = null;
+    zoomViewport?.addEventListener('pointerdown', event => {
+        if (event.target.closest('.graph-node-pro, .graph-detail-overlay, button, a')) return;
+        panStart = {
+            x: event.clientX,
+            y: event.clientY,
+            left: zoomViewport.scrollLeft,
+            top: zoomViewport.scrollTop
+        };
+        zoomViewport.classList.add('panning');
+        zoomViewport.setPointerCapture?.(event.pointerId);
+    });
+
+    zoomViewport?.addEventListener('pointermove', event => {
+        if (!panStart) return;
+        zoomViewport.scrollLeft = panStart.left - (event.clientX - panStart.x);
+        zoomViewport.scrollTop = panStart.top - (event.clientY - panStart.y);
+    });
+
+    const stopPan = event => {
+        if (!panStart) return;
+        panStart = null;
+        zoomViewport.classList.remove('panning');
+        try { zoomViewport.releasePointerCapture?.(event.pointerId); } catch {}
+    };
+    zoomViewport?.addEventListener('pointerup', stopPan);
+    zoomViewport?.addEventListener('pointercancel', stopPan);
+
+    // Address hover/click detail behavior. The graph still renders compactly,
+    // but every visible node can expose its full address and related transactions.
+    const detailOverlay = document.getElementById(`${uid}_detail`);
+    const nodeElements = container.querySelectorAll(`[data-node-key]`);
+    let pinnedKey = null;
+
+    nodeElements.forEach(nodeEl => {
+        const key = nodeEl.getAttribute("data-node-key");
+        const fullAddress = displayedAddresses.find(a => a.toLowerCase() === key) || key;
+        const role = roleOf(fullAddress);
+        const vasp = vaspMap.get(key);
+
+        const showDetails = () => {
+            container.querySelectorAll(".graph-node-pro.selected").forEach(n => n.classList.remove("selected"));
+            nodeEl.classList.add("selected");
+            renderGraphAddressDetail(fullAddress, flows, { role, vasp }, detailOverlay);
+        };
+
+        nodeEl.addEventListener("mouseenter", () => {
+            if (!pinnedKey) showDetails();
+        });
+
+        nodeEl.addEventListener("focus", () => {
+            if (!pinnedKey) showDetails();
+        });
+
+        nodeEl.addEventListener("click", event => {
+            event.stopPropagation();
+            pinnedKey = key;
+            showDetails();
+        });
+
+        nodeEl.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                pinnedKey = key;
+                showDetails();
+            }
+        });
+
+        nodeEl.addEventListener("mouseleave", () => {
+            // Keep the last hovered details visible until another node is selected
+            // or the close button is used.
+        });
+    });
+
+    // Click any empty area of the graph to close the detail panel.
+    // Clicking another node opens that node's details instead.
+    container.addEventListener("click", event => {
+        const node = event.target.closest?.(".graph-node-pro");
+        const overlayEl = event.target.closest?.(".graph-detail-overlay");
+
+        if (node || overlayEl) return;
+
+        pinnedKey = null;
+        if (detailOverlay) {
+            detailOverlay.classList.remove("visible");
+        }
+        container.querySelectorAll(".graph-node-pro.selected")
+            .forEach(n => n.classList.remove("selected"));
+    });
+
+    // Escape key also closes the open address details.
+    const handleEscape = event => {
+        if (event.key === "Escape" && detailOverlay?.classList.contains("visible")) {
+            pinnedKey = null;
+            detailOverlay.classList.remove("visible");
+            container.querySelectorAll(".graph-node-pro.selected")
+                .forEach(n => n.classList.remove("selected"));
+        }
+    };
+    document.addEventListener("keydown", handleEscape);
+}
+
+
+/* =========================================================
+   REALTIME POLLING
+========================================================= */
+
+function startRealtimePolling() {
+
+    clearRealtimePolling();
+
+    pollRealtime();
+
+    realtimeTimer =
+        setInterval(
+            pollRealtime,
+            15000
+        );
+
+}
+
+function clearRealtimePolling() {
+
+    if (
+        realtimeTimer
+    ) {
+        clearInterval(
+            realtimeTimer
+        );
+
+        realtimeTimer =
+            null;
+    }
+
+}
+
+async function pollRealtime() {
+
+    if (
+        !watchedWallet
+    ) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                API_BASE_URL +
+                    "/api/realtime/alerts?wallet=" +
+                    encodeURIComponent(
+                        watchedWallet
+                    )
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            return;
+        }
+
+        renderRealtimeAlerts(
+            data
+        );
+
+    } catch (
+        error
+    ) {
+
+        console.error(
+            "Realtime polling error:",
+            error
+        );
+
+    }
+
+}
+
+function renderRealtimeAlerts(
+    data
+) {
+
+    const container =
+        document.getElementById(
+            "realtimeAlerts"
+        );
+
+    if (
+        !data.alerts ||
+        data.alerts.length ===
+            0
+    ) {
+
+        container.innerHTML = `
+            <strong>
+                <span class="dot green"></span>
+                No active real-time alerts
+            </strong>
+
+            <p class="status">
+                Last checked:
+                ${escapeHtml(
+                    data.lastChecked ||
+                        "—"
+                )}
+            </p>
+        `;
+
+        return;
+    }
+
+    container.innerHTML =
+        data.alerts
+            .map(
+                alert => `
+                    <div class="insight">
+
+                        <strong>
+
+                            <span class="dot"></span>
+
+                            ${escapeHtml(
+                                alert.title ||
+                                    "Realtime Alert"
+                            )}
+
+                            <span
+                                style="
+                                    float:right;
+                                    color:#f0b45c;
+                                "
+                            >
+                                ${escapeHtml(
+                                    alert.severity ||
+                                        "MEDIUM"
+                                )}
+                            </span>
+
+                        </strong>
+
+                        <p>
+                            ${escapeHtml(
+                                alert.message ||
+                                    ""
+                            )}
+                        </p>
+
+                    </div>
+                `
+            )
+            .join("");
+
+}
+
+
+/* =========================================================
+   EVIDENCE
+========================================================= */
+
+async function preserveEvidence() {
+
+    if (
+        !latestAnalysis
+    ) {
+
+        alert(
+            "Analyze a wallet first."
+        );
+
+        return;
+    }
+
+    const badge =
+        document.getElementById(
+            "evidenceBadge"
+        );
+
+    const container =
+        document.getElementById(
+            "evidenceContainer"
+        );
+
+    try {
+
+        const response =
+            await fetch(
+                API_BASE_URL +
+                    "/api/evidence/preserve",
+                {
+                    method:
+                        "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            wallet:
+                                latestAnalysis.wallet,
+
+                            blockchain:
+                                latestAnalysis.blockchain,
+
+                            token:
+                                latestAnalysis.token,
+
+                            transactions:
+                                latestAnalysis.transactions,
+
+                            risk:
+                                latestAnalysis.risk,
+
+                            riskText:
+                                latestAnalysis.riskText,
+
+                            alerts:
+                                latestAnalysis.alerts,
+
+                            fraudTypologies:
+                                latestAnalysis.fraudTypologies,
+
+                            recommendations:
+                                latestAnalysis.recommendations,
+
+                            complaintCrossReference:
+                                latestAnalysis.complaintCrossReference,
+
+                            vasp:
+                                latestAnalysis.vasp
+                        })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                    "Evidence preservation failed."
+            );
+        }
+
+        latestEvidence =
+            data.evidence;
+
+        badge.innerText =
+            "PRESERVED";
+
+        badge.className =
+            "badge risk-low";
+
+        container.innerHTML = `
+            <div class="match-box no-match">
+
+                <div class="match-title">
+
+                    <span class="dot green"></span>
+
+                    Evidence Preserved
+
+                </div>
+
+                <div class="match-details">
+
+                    <strong>Case ID:</strong>
+                    ${escapeHtml(
+                        data.evidence.caseId
+                    )}
+
+                    <br>
+
+                    <strong>Wallet:</strong>
+                    ${escapeHtml(
+                        data.evidence.wallet
+                    )}
+
+                    <br>
+
+                    <strong>Transactions:</strong>
+                    ${data.evidence.transactionCount}
+
+                    <br>
+
+                    <strong>Preserved At:</strong>
+                    ${escapeHtml(
+                        data.evidence.preservedAt
+                    )}
+
+                </div>
+
+            </div>
+        `;
+
+    } catch (
+        error
+    ) {
+
+        badge.innerText =
+            "FAILED";
+
+        badge.className =
+            "badge risk-high";
+
+        container.innerHTML = `
+            <div class="match-box match-found">
+
+                <div class="match-title">
+
+                    Evidence Preservation Failed
+
+                </div>
+
+                <div class="match-details">
+
+                    ${escapeHtml(
+                        error.message
+                    )}
+
+                </div>
+
+            </div>
+        `;
+
+    }
+
+}
+
+
+/* =========================================================
+   DOWNLOAD EVIDENCE
+========================================================= */
+
+function downloadEvidenceJSON() {
+
+    if (
+        !latestEvidence
+    ) {
+
+        alert(
+            "Preserve evidence first."
+        );
+
+        return;
+    }
+
+    downloadObject(
+        latestEvidence,
+        "chaintrace-evidence.json"
+    );
+
+}
+
+
+/* =========================================================
+   DOWNLOAD ANALYSIS
+========================================================= */
+
+function downloadJSON() {
+
+    if (
+        !latestAnalysis
+    ) {
+
+        alert(
+            "Analyze a wallet first."
+        );
+
+        return;
+    }
+
+    downloadObject(
+        latestAnalysis,
+        "chaintrace-investigation.json"
+    );
+
+}
+
+function downloadObject(
+    object,
+    filename
+) {
+
+    const blob =
+        new Blob(
+            [
+                JSON.stringify(
+                    object,
+                    null,
+                    2
+                )
+            ],
+            {
+                type:
+                    "application/json"
+            }
+        );
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+    const link =
+        document.createElement(
+            "a"
+        );
+
+    link.href =
+        url;
+
+    link.download =
+        filename;
+
+    document.body.appendChild(
+        link
+    );
+
+    link.click();
+
+    link.remove();
+
+    URL.revokeObjectURL(
+        url
+    );
+
+}
+
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+function printReport() {
+
+    if (
+        !latestAnalysis
+    ) {
+
+        alert(
+            "Analyze a wallet first."
+        );
+
+        return;
+    }
+
+    window.print();
+
+}
+
+
+/* =========================================================
+   INTEGRATIONS
+========================================================= */
+
+async function checkIntegrations() {
+
+    const container =
+        document.getElementById(
+            "integrationContainer"
+        );
+
+    if (!container) return;
+
+    try {
+
+        let data;
+
+        try {
+            data =
+                await fetchJson(
+                    API_BASE_URL +
+                        "/api/integration/status"
+                );
+        } catch {
+            data =
+                await fetchJson(
+                    API_BASE_URL +
+                        "/api/health"
+                );
+        }
+
+        const integrations =
+            data.integrations || {};
+
+        const tronReady =
+            Boolean(
+                data.tronApiKey === "loaded" ||
+                data.blockchainSupport?.tron ||
+                data.integrations?.tron
+            );
+
+        const evmReady =
+            Boolean(
+                data.integrations?.etherscan ||
+                data.blockchainSupport?.ethereum ||
+                data.blockchainSupport?.bnb ||
+                data.authentication?.externalApi ||
+                data.authentication?.etherscan
+            );
+
+        container.innerHTML = `
+            <div class="integration-item">
+                <strong>Backend API</strong>
+                <p class="json-small">ONLINE</p>
+            </div>
+
+            <div class="integration-item">
+                <strong>TRON / TRC-20</strong>
+                <p class="json-small">
+                    ${tronReady ? "READY" : "CHECK API KEY"}
+                </p>
+            </div>
+
+            <div class="integration-item">
+                <strong>Ethereum / ERC-20</strong>
+                <p class="json-small">
+                    ${evmReady ? "READY" : "CHECK API KEY"}
+                </p>
+            </div>
+
+            <div class="integration-item">
+                <strong>BNB Chain / BEP-20</strong>
+                <p class="json-small">
+                    ${evmReady ? "READY" : "CHECK API KEY"}
+                </p>
+            </div>
+
+            <div class="integration-item">
+                <strong>External API</strong>
+                <p class="json-small">
+                    ${
+                        integrations.externalApi
+                            ? "CONFIGURED"
+                            : "LOCAL / NOT CONFIGURED"
+                    }
+                </p>
+            </div>
+
+            <div class="integration-item">
+                <strong>NCRP</strong>
+                <p class="json-small">
+                    ${
+                        integrations.ncrp
+                            ? "CONFIGURED"
+                            : "LOCAL / NOT CONFIGURED"
+                    }
+                </p>
+            </div>
+
+            <div class="integration-item">
+                <strong>SAHYOG</strong>
+                <p class="json-small">
+                    ${
+                        integrations.sahyog
+                            ? "CONFIGURED"
+                            : "LOCAL / NOT CONFIGURED"
+                    }
+                </p>
+            </div>
+        `;
+
+    } catch (error) {
+
+        container.innerHTML = `
+            <div class="integration-item">
+                <strong>Integration Status</strong>
+                <p class="json-small">
+                    ${escapeHtml(
+                        error.message ||
+                        "Backend unavailable."
+                    )}
+                </p>
+            </div>
+        `;
+    }
+}
+
+
+/* =========================================================
+   SET TEXT
+========================================================= */
+
+function shortenAddress(address) {
+    const value = String(address || "");
+    if (value.length <= 18) return value;
+    return `${value.slice(0, 8)}...${value.slice(-8)}`;
+}
+
+
+function setText(
+    id,
+    value
+) {
+
+    const element =
+        document.getElementById(
+            id
+        );
+
+    if (element) {
+        element.innerText =
+            value;
+    }
+
+}
+
+
+/* =========================================================
+   NUMBER
+========================================================= */
+
+function formatNumber(
+    value
+) {
+
+    const number =
+        Number(value);
+
+    if (
+        !Number.isFinite(
+            number
+        )
+    ) {
+        return "0";
+    }
+
+    return number.toLocaleString(
+        undefined,
+        {
+            maximumFractionDigits:
+                6
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(
+    value
+) {
+
+    return String(
+        value ?? ""
+    )
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
+
+}
+
+    window.addEventListener("beforeunload", () => {
+        clearRealtimePolling();
+    });
+
+</script>
+
+</body>
+
+</html>
