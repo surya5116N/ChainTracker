@@ -448,7 +448,7 @@
         /* ===== TRANSACTION SEARCH ===== */
         .transaction-search-bar {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0, 1fr) auto auto;
             gap: 10px;
             margin: 0 0 12px 0;
             align-items: center;
@@ -499,9 +499,87 @@
             background: #193744;
         }
 
+        /* ===== TRANSACTION TYPE FILTER ===== */
+        .transaction-type-filter {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 4px;
+            border: 1px solid #173b49;
+            border-radius: 10px;
+            background: #06131a;
+            box-shadow: inset 0 0 12px rgba(0, 210, 255, 0.04);
+        }
+
+        .transaction-type-btn {
+            min-width: 92px;
+            padding: 10px 15px;
+            border: 1px solid #244653;
+            border-radius: 8px;
+            background: #0b1b23;
+            color: #78939e;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: .5px;
+            cursor: pointer;
+            transition: all .18s ease;
+        }
+
+        .transaction-type-btn:hover {
+            color: #eaffff;
+            border-color: #2bd4ff;
+            box-shadow: 0 0 10px rgba(43,212,255,.18);
+        }
+
+        .transaction-type-btn.active.sent {
+            color: #fff;
+            border-color: #ff5d69;
+            background: linear-gradient(135deg, #8e2634, #d83d4d);
+            box-shadow: 0 0 14px rgba(255, 80, 95, .32);
+        }
+
+        .transaction-type-btn.active.received {
+            color: #fff;
+            border-color: #24e8ae;
+            background: linear-gradient(135deg, #087b61, #10c995);
+            box-shadow: 0 0 14px rgba(36, 232, 174, .28);
+        }
+
+        .transaction-type-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 76px;
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: .2px;
+        }
+
+        .transaction-type-pill.sent {
+            color: #ff9da5;
+            background: rgba(216, 61, 77, .22);
+            border: 1px solid rgba(255, 93, 105, .28);
+        }
+
+        .transaction-type-pill.received {
+            color: #4ff0bf;
+            background: rgba(16, 201, 149, .18);
+            border: 1px solid rgba(36, 232, 174, .25);
+        }
+
         @media (max-width: 700px) {
             .transaction-search-bar {
                 grid-template-columns: 1fr;
+            }
+
+            .transaction-type-filter {
+                justify-content: stretch;
+            }
+
+            .transaction-type-btn {
+                flex: 1;
             }
 
             .transaction-search-meta {
@@ -2455,6 +2533,30 @@
                 aria-label="Search transactions"
             >
 
+            <div
+                class="transaction-type-filter"
+                role="group"
+                aria-label="Transaction type filter"
+            >
+                <button
+                    type="button"
+                    id="transactionTypeSent"
+                    class="transaction-type-btn sent active"
+                    aria-pressed="true"
+                >
+                    SENT
+                </button>
+
+                <button
+                    type="button"
+                    id="transactionTypeReceived"
+                    class="transaction-type-btn received active"
+                    aria-pressed="true"
+                >
+                    RECEIVED
+                </button>
+            </div>
+
             <button
                 id="transactionSearchClear"
                 class="transaction-search-clear secondary"
@@ -2514,7 +2616,7 @@
 
                     <tr>
 
-                        <td colspan="5">
+                        <td colspan="6">
                             No transactions loaded.
                         </td>
 
@@ -2552,6 +2654,9 @@ let liveTrackLastFutureHashes = new Set();
    API
 ========================================================= */
 
+let transactionTypeFilter = "ALL";
+
+
 const API_BASE_URL =
     window.CHAINTRACE_API_URL ||
     "https://chaintracker-u5hk.onrender.com";
@@ -2586,7 +2691,27 @@ document.addEventListener(
                     transactionSearchInput.value = "";
                     transactionSearchInput.focus();
                 }
+                transactionTypeFilter = "ALL";
+                updateTransactionTypeButtons();
                 applyTransactionSearch("");
+            });
+        }
+
+        const transactionTypeSent =
+            document.getElementById("transactionTypeSent");
+
+        const transactionTypeReceived =
+            document.getElementById("transactionTypeReceived");
+
+        if (transactionTypeSent) {
+            transactionTypeSent.addEventListener("click", () => {
+                setTransactionTypeFilter("SENT");
+            });
+        }
+
+        if (transactionTypeReceived) {
+            transactionTypeReceived.addEventListener("click", () => {
+                setTransactionTypeFilter("RECEIVED");
             });
         }
 
@@ -4298,7 +4423,7 @@ function getTransactionSearchText(tx) {
         .toLowerCase();
 }
 
-function updateTransactionSearchMeta(visibleCount, totalCount, query = "") {
+function updateTransactionSearchMeta(visibleCount, totalCount, query = "", typeFilter = "ALL") {
     const meta = document.getElementById("transactionSearchMeta");
     if (!meta) return;
 
@@ -4307,28 +4432,103 @@ function updateTransactionSearchMeta(visibleCount, totalCount, query = "") {
         return;
     }
 
+    const typeLabel = typeFilter === "ALL"
+        ? ""
+        : ` • <strong>${escapeHtml(typeFilter)}</strong> only`;
+
     if (!query) {
-        const visible = Math.min(totalCount, MAX_VISIBLE_TRANSACTION_ROWS);
-        meta.innerHTML = totalCount > MAX_VISIBLE_TRANSACTION_ROWS
-            ? `<strong>${totalCount.toLocaleString()}</strong> total transactions • showing first <strong>${visible.toLocaleString()}</strong> • search to find any address`
-            : `<strong>${totalCount.toLocaleString()}</strong> transactions loaded`;
+        const visible = Math.min(visibleCount, MAX_VISIBLE_TRANSACTION_ROWS);
+        meta.innerHTML = visibleCount > MAX_VISIBLE_TRANSACTION_ROWS
+            ? `<strong>${totalCount.toLocaleString()}</strong> total transactions • showing first <strong>${visible.toLocaleString()}</strong>${typeLabel}`
+            : `<strong>${visibleCount.toLocaleString()}</strong> transactions loaded${typeLabel}`;
         return;
     }
 
-    meta.innerHTML = `<strong>${visibleCount.toLocaleString()}</strong> match${visibleCount === 1 ? "" : "es"} for <strong>${escapeHtml(query)}</strong>`;
+    meta.innerHTML = `<strong>${visibleCount.toLocaleString()}</strong> match${visibleCount === 1 ? "" : "es"} for <strong>${escapeHtml(query)}</strong>${typeLabel}`;
+}
+
+function getNormalizedTransactionType(tx) {
+    const raw = String(
+        tx?.type ||
+        tx?.direction ||
+        ""
+    ).trim().toLowerCase();
+
+    if (raw.includes("send") || raw === "out" || raw === "outgoing") {
+        return "SENT";
+    }
+
+    if (raw.includes("receiv") || raw === "in" || raw === "incoming") {
+        return "RECEIVED";
+    }
+
+    const wallet = String(latestAnalysis?.wallet || "").toLowerCase();
+    const from = String(tx?.from || tx?.sender || "").toLowerCase();
+    const to = String(tx?.to || tx?.receiver || "").toLowerCase();
+
+    if (wallet && from === wallet) return "SENT";
+    if (wallet && to === wallet) return "RECEIVED";
+
+    return "UNKNOWN";
+}
+
+function updateTransactionTypeButtons() {
+    const sent = document.getElementById("transactionTypeSent");
+    const received = document.getElementById("transactionTypeReceived");
+
+    const sentActive = transactionTypeFilter === "ALL" || transactionTypeFilter === "SENT";
+    const receivedActive = transactionTypeFilter === "ALL" || transactionTypeFilter === "RECEIVED";
+
+    if (sent) {
+        sent.classList.toggle("active", sentActive);
+        sent.setAttribute("aria-pressed", String(sentActive));
+    }
+
+    if (received) {
+        received.classList.toggle("active", receivedActive);
+        received.setAttribute("aria-pressed", String(receivedActive));
+    }
+}
+
+function setTransactionTypeFilter(type) {
+    const next = String(type || "").toUpperCase();
+
+    if (transactionTypeFilter === next) {
+        transactionTypeFilter = "ALL";
+    } else {
+        transactionTypeFilter = next === "SENT" || next === "RECEIVED"
+            ? next
+            : "ALL";
+    }
+
+    updateTransactionTypeButtons();
+
+    const searchInput = document.getElementById("transactionSearchInput");
+    applyTransactionSearch(searchInput?.value || "");
 }
 
 function applyTransactionSearch(query = "") {
     const normalizedQuery = String(query || "").trim().toLowerCase();
 
-    const filtered = normalizedQuery
-        ? allTransactionRows.filter(tx => getTransactionSearchText(tx).includes(normalizedQuery))
-        : allTransactionRows;
+    let filtered = allTransactionRows;
+
+    if (transactionTypeFilter !== "ALL") {
+        filtered = filtered.filter(tx =>
+            getNormalizedTransactionType(tx) === transactionTypeFilter
+        );
+    }
+
+    if (normalizedQuery) {
+        filtered = filtered.filter(tx =>
+            getTransactionSearchText(tx).includes(normalizedQuery)
+        );
+    }
 
     updateTransactionSearchMeta(
         filtered.length,
         allTransactionRows.length,
-        normalizedQuery
+        normalizedQuery,
+        transactionTypeFilter
     );
 
     renderTransactionRows(filtered);
@@ -4396,7 +4596,7 @@ function renderTransactionRows(transactions) {
                 </td>
             </tr>
         `;
-        updateTransactionSearchMeta(0, 0, "");
+        updateTransactionSearchMeta(0, allTransactionRows.length, "", transactionTypeFilter);
         return;
     }
 
@@ -4404,7 +4604,17 @@ function renderTransactionRows(transactions) {
 
     rows.forEach(tx => {
         const row = document.createElement("tr");
-        const type = String(tx.type || tx.direction || "—");
+        const normalizedType = getNormalizedTransactionType(tx);
+        const type = normalizedType === "SENT"
+            ? "Sent"
+            : normalizedType === "RECEIVED"
+                ? "Received"
+                : String(tx.type || tx.direction || "—");
+        const typeClass = normalizedType === "SENT"
+            ? "sent"
+            : normalizedType === "RECEIVED"
+                ? "received"
+                : "";
         const amount = tx.amount ?? tx.value ?? 0;
         const from = String(tx.from || tx.sender || "—");
         const to = String(tx.to || tx.receiver || "—");
@@ -4412,14 +4622,18 @@ function renderTransactionRows(transactions) {
         const txDateTime = formatTransactionDateTime(tx);
 
         const traceWallet = String(
-            String(type).toLowerCase().includes("sent") ||
+            normalizedType === "SENT" ||
             String(tx.from || "").toLowerCase() === String(latestAnalysis?.wallet || "").toLowerCase()
                 ? to
                 : from
         );
 
         row.innerHTML = `
-            <td>${escapeHtml(type)}</td>
+            <td>
+                <span class="transaction-type-pill ${typeClass}">
+                    ${escapeHtml(type)}
+                </span>
+            </td>
             <td>${escapeHtml(String(amount))} USDT</td>
             <td class="tx-address-cell" title="${escapeHtml(from)}">${escapeHtml(from)}</td>
             <td class="tx-address-cell" title="${escapeHtml(to)}">${escapeHtml(to)}</td>
@@ -4541,6 +4755,8 @@ async function traceTransactionWallet(wallet) {
 
 function renderTransactions(transactions) {
     allTransactionRows = Array.isArray(transactions) ? transactions : [];
+    transactionTypeFilter = "ALL";
+    updateTransactionTypeButtons();
 
     const searchInput = document.getElementById("transactionSearchInput");
     if (searchInput) searchInput.value = "";
