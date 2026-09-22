@@ -1755,11 +1755,60 @@
         }
         .trace-btn {
             width: auto;
-            padding: 7px 10px;
+            min-width: 76px;
+            padding: 8px 14px;
+            border: 1px solid #2bd4ff;
+            border-radius: 7px;
+            background: linear-gradient(135deg, #0f9ed1, #176bff);
+            color: #ffffff;
             font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .5px;
+            box-shadow: 0 0 10px rgba(43,212,255,.22), inset 0 1px 0 rgba(255,255,255,.14);
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+        }
+        .trace-btn:hover {
+            background: linear-gradient(135deg, #18b9ef, #2d7dff);
+            box-shadow: 0 0 16px rgba(43,212,255,.48), 0 0 28px rgba(45,125,255,.18);
+            transform: translateY(-1px);
+            filter: brightness(1.12);
+        }
+        .trace-btn:active {
+            transform: translateY(0);
         }
         .trace-cell {
             text-align: center;
+            white-space: nowrap;
+        }
+        .tx-address-cell {
+            min-width: 250px;
+            max-width: 420px;
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            word-break: break-all;
+            color: #d9edf4 !important;
+            font-family: Consolas, monospace;
+            font-size: 10px;
+            line-height: 1.45;
+        }
+        .tx-time-cell {
+            min-width: 155px;
+            color: #9fc8d5 !important;
+            font-family: Consolas, monospace;
+            font-size: 10px;
+            line-height: 1.4;
+            white-space: nowrap !important;
+        }
+        .tx-time-date {
+            display: block;
+            color: #dff3fa;
+            font-weight: 700;
+        }
+        .tx-time-zone {
+            display: block;
+            margin-top: 2px;
+            color: #718a94;
+            font-size: 9px;
         }
 
 </style>
@@ -2440,11 +2489,19 @@
                         </th>
 
                         <th>
-                            From
+                            From Address
                         </th>
 
                         <th>
-                            To
+                            To Address
+                        </th>
+
+                        <th>
+                            Date &amp; Time
+                        </th>
+
+                        <th>
+                            Trace
                         </th>
 
                     </tr>
@@ -4277,6 +4334,54 @@ function applyTransactionSearch(query = "") {
     renderTransactionRows(filtered);
 }
 
+function formatTransactionDateTime(tx) {
+    const raw =
+        tx?.timestamp ??
+        tx?.block_timestamp ??
+        tx?.timeStamp ??
+        tx?.datetime ??
+        tx?.date ??
+        tx?.createdAt ??
+        tx?.created_at ??
+        null;
+
+    let date = null;
+
+    if (typeof raw === "number" || /^\d+(?:\.\d+)?$/.test(String(raw || ""))) {
+        const numeric = Number(raw);
+        if (Number.isFinite(numeric)) {
+            date = new Date(numeric < 100000000000 ? numeric * 1000 : numeric);
+        }
+    } else if (raw) {
+        const parsed = new Date(String(raw));
+        if (!Number.isNaN(parsed.getTime())) {
+            date = parsed;
+        }
+    }
+
+    if (!date || Number.isNaN(date.getTime())) {
+        return { date: "—", time: "No timestamp" };
+    }
+
+    const datePart = date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+
+    const timePart = date.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+    });
+
+    return {
+        date: datePart,
+        time: timePart
+    };
+}
+
 function renderTransactionRows(transactions) {
     const container = document.getElementById("transactionBody");
     if (!container) return;
@@ -4286,7 +4391,7 @@ function renderTransactionRows(transactions) {
     if (!transactions || transactions.length === 0) {
         container.innerHTML = `
             <tr>
-                <td colspan="5" style="color:#8297a3; padding:12px;">
+                <td colspan="6" style="color:#8297a3; padding:12px;">
                     No transactions found.
                 </td>
             </tr>
@@ -4301,27 +4406,32 @@ function renderTransactionRows(transactions) {
         const row = document.createElement("tr");
         const type = String(tx.type || tx.direction || "—");
         const amount = tx.amount ?? tx.value ?? 0;
-        const from = String(tx.from || "—");
-        const to = String(tx.to || "—");
+        const from = String(tx.from || tx.sender || "—");
+        const to = String(tx.to || tx.receiver || "—");
         const explorer = tx.explorerUrl || tx.explorer_url || "";
+        const txDateTime = formatTransactionDateTime(tx);
+
+        const traceWallet = String(
+            String(type).toLowerCase().includes("sent") ||
+            String(tx.from || "").toLowerCase() === String(latestAnalysis?.wallet || "").toLowerCase()
+                ? to
+                : from
+        );
 
         row.innerHTML = `
             <td>${escapeHtml(type)}</td>
             <td>${escapeHtml(String(amount))} USDT</td>
-            <td>${escapeHtml(shortenAddress(from))}</td>
-            <td>${escapeHtml(shortenAddress(to))}</td>
+            <td class="tx-address-cell" title="${escapeHtml(from)}">${escapeHtml(from)}</td>
+            <td class="tx-address-cell" title="${escapeHtml(to)}">${escapeHtml(to)}</td>
+            <td class="tx-time-cell">
+                <span class="tx-time-date">${escapeHtml(txDateTime.date)}</span>
+                <span class="tx-time-zone">${escapeHtml(txDateTime.time)} IST</span>
+            </td>
             <td class="trace-cell">
                 <button
                     type="button"
-                    class="secondary trace-btn"
-                    data-trace-wallet="${escapeHtml(
-                        String(
-                            String(type).toLowerCase().includes("sent") ||
-                            String(tx.from || "").toLowerCase() === String(latestAnalysis?.wallet || "").toLowerCase()
-                                ? to
-                                : from
-                        )
-                    )}"
+                    class="trace-btn"
+                    data-trace-wallet="${escapeHtml(traceWallet)}"
                     data-tx-hash="${escapeHtml(String(tx.hash || tx.transaction_id || ""))}"
                     data-explorer="${escapeHtml(explorer)}"
                 >TRACE</button>
@@ -4340,7 +4450,7 @@ function renderTransactionRows(transactions) {
     if (transactions.length > MAX_VISIBLE_TRANSACTION_ROWS) {
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td colspan="5" style="color:#8297a3; padding:12px;">
+            <td colspan="6" style="color:#8297a3; padding:12px;">
                 Showing first <strong>${MAX_VISIBLE_TRANSACTION_ROWS.toLocaleString()}</strong>
                 of <strong>${transactions.length.toLocaleString()}</strong> matching transactions.
             </td>
@@ -4348,7 +4458,6 @@ function renderTransactionRows(transactions) {
         container.appendChild(row);
     }
 }
-
 
 async function traceTransactionWallet(wallet) {
     if (!wallet) {
