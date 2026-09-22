@@ -1501,7 +1501,9 @@ async function fetchTronNativeTransfers(
 
 async function tronGet(
     endpoint,
-    params = {}
+    params = {},
+    retries = 3,
+    baseDelayMs = 1500
 ) {
     const url =
         new URL(
@@ -1522,37 +1524,48 @@ async function tronGet(
         }
     );
 
-    console.log(
-        "TRON GET:",
-        url.toString()
-    );
+    for (
+        let attempt = 0;
+        attempt <= retries;
+        attempt++
+    ) {
 
-    const response =
-        await fetch(
-            url,
-            {
-                method: "GET",
-                headers: TRON_HEADERS
-            }
+        console.log(
+            "TRON GET:",
+            url.toString(),
+            attempt > 0
+                ? `(retry ${attempt}/${retries})`
+                : ""
         );
 
-    const text =
-        await response.text();
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "GET",
+                    headers: TRON_HEADERS
+                }
+            );
 
-    let data = {};
+        const text =
+            await response.text();
 
-    try {
-        data =
-            text
-                ? JSON.parse(text)
-                : {};
-    } catch {
-        data = {
-            raw: text
-        };
-    }
+        let data = {};
 
-    if (!response.ok) {
+        try {
+            data =
+                text
+                    ? JSON.parse(text)
+                    : {};
+        } catch {
+            data = {
+                raw: text
+            };
+        }
+
+        if (response.ok) {
+            return data;
+        }
 
         console.error(
             "TRON API ERROR:",
@@ -1579,17 +1592,29 @@ async function tronGet(
         if (
             response.status === 429
         ) {
-            throw new Error(
-                "TRON API rate limit reached."
+
+            if (attempt === retries) {
+                throw new Error(
+                    "TRON API rate limit reached."
+                );
+            }
+
+            const waitMs =
+                baseDelayMs * Math.pow(2, attempt);
+
+            console.warn(
+                `TRON rate limited, retrying in ${waitMs}ms (attempt ${attempt + 1}/${retries})...`
             );
+
+            await sleep(waitMs);
+
+            continue;
         }
 
         throw new Error(
             `TRON API error: ${response.status}`
         );
     }
-
-    return data;
 }
 
 
