@@ -1,6 +1,6 @@
 {
   "name": "chaintrace-backend",
-  "version": "5.0.2",
+  "version": "5.0.0",
   "description": "ChainTrace AI blockchain investigation backend",
   "main": "server.js",
   "scripts": {
