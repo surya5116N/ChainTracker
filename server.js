@@ -772,6 +772,55 @@ async function fetchJson(
 }
 
 
+function sleep(ms) {
+    return new Promise(
+        resolve => setTimeout(resolve, ms)
+    );
+}
+
+/*
+ * Wraps fetchJson with exponential-backoff retries
+ * specifically for rate-limit responses (HTTP 429 or
+ * provider messages like "rate limit" / "max calls per sec").
+ * This is what actually protects us from a burst of
+ * requests (e.g. during a multi-hop depth trace) tripping
+ * the upstream blockchain API's rate limiter.
+ */
+async function fetchJsonWithRetry(
+    url,
+    options = {},
+    timeoutMs = 20000,
+    retries = 3,
+    baseDelayMs = 1500
+) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+
+        try {
+            return await fetchJson(url, options, timeoutMs);
+        } catch (error) {
+
+            const isRateLimit =
+                error.status === 429 ||
+                /rate limit|max calls|too many requests/i.test(
+                    error.message || ""
+                );
+
+            if (!isRateLimit || attempt === retries) {
+                throw error;
+            }
+
+            const waitMs =
+                baseDelayMs * Math.pow(2, attempt);
+
+            console.warn(
+                `Rate limited, retrying in ${waitMs}ms (attempt ${attempt + 1}/${retries})...`
+            );
+
+            await sleep(waitMs);
+        }
+    }
+}
+
 /* =========================================================
    CACHE HELPERS
 ========================================================= */
@@ -1599,6 +1648,10 @@ async function getTrc20Transactions(
         ) {
             break;
         }
+
+        // Small pacing delay between pages to avoid
+        // bursting the TRON API rate limit.
+        await sleep(220);
 
         for (
             const tx of pageTransactions
@@ -2569,7 +2622,7 @@ async function getEvmUsdtTransactions(
         try {
 
             data =
-                await fetchJson(
+                await fetchJsonWithRetry(
                     url,
                     {
                         headers: {
@@ -2590,6 +2643,13 @@ async function getEvmUsdtTransactions(
             );
 
             throw error;
+        }
+
+        // Small pacing delay so paginated / recursive
+        // calls don't burst past the provider's per-second
+        // rate limit.
+        if (page < maxPages) {
+            await sleep(220);
         }
 
         if (
@@ -5312,7 +5372,8 @@ async function traceWallet(
     blockchain = "tron",
     token = "USDT",
     depth = 2,
-    visited = new Set()
+    visited = new Set(),
+    budget = { calls: 0, max: 40 }
 ) {
 
     const network =
@@ -5365,6 +5426,34 @@ async function traceWallet(
     nextVisited.add(
         walletKey
     );
+
+    if (
+        budget.calls >=
+        budget.max
+    ) {
+
+        return {
+
+            wallet,
+
+            blockchain:
+                network,
+
+            depth: 0,
+
+            transactions: [],
+
+            counterparties: [],
+
+            nodes: [],
+
+            edges: [],
+
+            truncated: true
+        };
+    }
+
+    budget.calls++;
 
     const indexed =
         await scalableBlockchainIndex(
@@ -5448,18 +5537,29 @@ async function traceWallet(
     /*
      * Limit branching so that a large wallet
      * cannot create an uncontrolled recursive
-     * request tree.
+     * request tree. A branching factor of 10
+     * combined with depth was causing 10^depth
+     * calls and tripping the provider's rate
+     * limit — 4 keeps the tree from exploding
+     * while still surfacing the main flows.
      */
 
     const nextAddresses =
         counterparties.slice(
             0,
-            10
+            4
         );
 
     for (
         const nextAddress of nextAddresses
     ) {
+
+        if (
+            budget.calls >=
+            budget.max
+        ) {
+            break;
+        }
 
         const nextKey =
             normalizeWallet(
@@ -5474,6 +5574,10 @@ async function traceWallet(
             continue;
         }
 
+        // Pace out recursive calls so we don't
+        // burst the upstream API's per-second limit.
+        await sleep(220);
+
         try {
 
             const child =
@@ -5482,7 +5586,8 @@ async function traceWallet(
                     network,
                     token,
                     maxDepth,
-                    nextVisited
+                    nextVisited,
+                    budget
                 );
 
             result.children.push(
