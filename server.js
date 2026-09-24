@@ -256,8 +256,6 @@ const realtimeWatchers =
 const realtimeAlerts =
     [];
 
-const preservedEvidence = new Map();
-
 
 /* =========================================================
    GENERIC HELPERS
@@ -771,55 +769,6 @@ async function fetchJson(
     }
 }
 
-
-function sleep(ms) {
-    return new Promise(
-        resolve => setTimeout(resolve, ms)
-    );
-}
-
-/*
- * Wraps fetchJson with exponential-backoff retries
- * specifically for rate-limit responses (HTTP 429 or
- * provider messages like "rate limit" / "max calls per sec").
- * This is what actually protects us from a burst of
- * requests (e.g. during a multi-hop depth trace) tripping
- * the upstream blockchain API's rate limiter.
- */
-async function fetchJsonWithRetry(
-    url,
-    options = {},
-    timeoutMs = 20000,
-    retries = 3,
-    baseDelayMs = 1500
-) {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-
-        try {
-            return await fetchJson(url, options, timeoutMs);
-        } catch (error) {
-
-            const isRateLimit =
-                error.status === 429 ||
-                /rate limit|max calls|too many requests/i.test(
-                    error.message || ""
-                );
-
-            if (!isRateLimit || attempt === retries) {
-                throw error;
-            }
-
-            const waitMs =
-                baseDelayMs * Math.pow(2, attempt);
-
-            console.warn(
-                `Rate limited, retrying in ${waitMs}ms (attempt ${attempt + 1}/${retries})...`
-            );
-
-            await sleep(waitMs);
-        }
-    }
-}
 
 /* =========================================================
    CACHE HELPERS
@@ -1501,9 +1450,7 @@ async function fetchTronNativeTransfers(
 
 async function tronGet(
     endpoint,
-    params = {},
-    retries = 3,
-    baseDelayMs = 1500
+    params = {}
 ) {
     const url =
         new URL(
@@ -1524,48 +1471,37 @@ async function tronGet(
         }
     );
 
-    for (
-        let attempt = 0;
-        attempt <= retries;
-        attempt++
-    ) {
+    console.log(
+        "TRON GET:",
+        url.toString()
+    );
 
-        console.log(
-            "TRON GET:",
-            url.toString(),
-            attempt > 0
-                ? `(retry ${attempt}/${retries})`
-                : ""
+    const response =
+        await fetch(
+            url,
+            {
+                method: "GET",
+                headers: TRON_HEADERS
+            }
         );
 
-        const response =
-            await fetch(
-                url,
-                {
-                    method: "GET",
-                    headers: TRON_HEADERS
-                }
-            );
+    const text =
+        await response.text();
 
-        const text =
-            await response.text();
+    let data = {};
 
-        let data = {};
+    try {
+        data =
+            text
+                ? JSON.parse(text)
+                : {};
+    } catch {
+        data = {
+            raw: text
+        };
+    }
 
-        try {
-            data =
-                text
-                    ? JSON.parse(text)
-                    : {};
-        } catch {
-            data = {
-                raw: text
-            };
-        }
-
-        if (response.ok) {
-            return data;
-        }
+    if (!response.ok) {
 
         console.error(
             "TRON API ERROR:",
@@ -1592,29 +1528,17 @@ async function tronGet(
         if (
             response.status === 429
         ) {
-
-            if (attempt === retries) {
-                throw new Error(
-                    "TRON API rate limit reached."
-                );
-            }
-
-            const waitMs =
-                baseDelayMs * Math.pow(2, attempt);
-
-            console.warn(
-                `TRON rate limited, retrying in ${waitMs}ms (attempt ${attempt + 1}/${retries})...`
+            throw new Error(
+                "TRON API rate limit reached."
             );
-
-            await sleep(waitMs);
-
-            continue;
         }
 
         throw new Error(
             `TRON API error: ${response.status}`
         );
     }
+
+    return data;
 }
 
 
@@ -1673,10 +1597,6 @@ async function getTrc20Transactions(
         ) {
             break;
         }
-
-        // Small pacing delay between pages to avoid
-        // bursting the TRON API rate limit.
-        await sleep(220);
 
         for (
             const tx of pageTransactions
@@ -2647,7 +2567,7 @@ async function getEvmUsdtTransactions(
         try {
 
             data =
-                await fetchJsonWithRetry(
+                await fetchJson(
                     url,
                     {
                         headers: {
@@ -2668,13 +2588,6 @@ async function getEvmUsdtTransactions(
             );
 
             throw error;
-        }
-
-        // Small pacing delay so paginated / recursive
-        // calls don't burst past the provider's per-second
-        // rate limit.
-        if (page < maxPages) {
-            await sleep(220);
         }
 
         if (
@@ -4940,16 +4853,23 @@ app.post(
                     "USDT"
                 ).toUpperCase();
 
+            const depthValue =
+                safeString(
+                    req.body?.depth
+                ).toLowerCase();
+
             const depth =
-                Math.min(
-                    Math.max(
-                        Number(
-                            req.body?.depth
-                        ) || 2,
-                        1
-                    ),
-                    5
-                );
+                depthValue === "all"
+                    ? "all"
+                    : Math.min(
+                        Math.max(
+                            Number(
+                                depthValue
+                            ) || 1,
+                            1
+                        ),
+                        5
+                    );
 
             if (!wallet) {
 
@@ -5041,9 +4961,70 @@ app.post(
                             )
                     );
 
-            const transactions =
+            const directTransactions =
                 sortTransactions(
                     normalized
+                );
+
+            /*
+             * Depth handling:
+             *   1   = root wallet only
+             *   2-5 = root wallet + downstream hops
+             *   all = all available trace levels (currently up to 5)
+             */
+            let trace = null;
+            let traceTransactions = [];
+
+            if (
+                depth === "all" ||
+                Number(depth) > 1
+            ) {
+                trace =
+                    await traceWallet(
+                        wallet,
+                        blockchain,
+                        token,
+                        depth
+                    );
+
+                traceTransactions =
+                    flattenTraceTransactions(
+                        trace
+                    );
+            }
+
+            const combinedMap =
+                new Map();
+
+            for (
+                const tx of [
+                    ...directTransactions,
+                    ...traceTransactions
+                ]
+            ) {
+                const key =
+                    [
+                        tx.hash,
+                        tx.from,
+                        tx.to,
+                        tx.amount
+                    ].join("|");
+
+                if (
+                    !combinedMap.has(key)
+                ) {
+                    combinedMap.set(
+                        key,
+                        tx
+                    );
+                }
+            }
+
+            const transactions =
+                sortTransactions(
+                    Array.from(
+                        combinedMap.values()
+                    )
                 );
 
             const summary =
@@ -5210,7 +5191,17 @@ app.post(
 
                 timeline,
 
-                transactions
+                // Direct wallet transactions.
+                directTransactions,
+
+                // Multi-hop trace evidence.
+                trace,
+                traceTransactions,
+
+                // Transactions visible to the selected depth.
+                transactions,
+                allTransactions:
+                    transactions
             };
 
             setAnalysisCache(
@@ -5397,8 +5388,7 @@ async function traceWallet(
     blockchain = "tron",
     token = "USDT",
     depth = 2,
-    visited = new Set(),
-    budget = { calls: 0, max: 40 }
+    visited = new Set()
 ) {
 
     const network =
@@ -5407,13 +5397,15 @@ async function traceWallet(
         );
 
     const maxDepth =
-        Math.min(
-            Math.max(
-                Number(depth) || 2,
-                1
-            ),
-            5
-        );
+        depth === "all"
+            ? 5
+            : Math.min(
+                Math.max(
+                    Number(depth) || 1,
+                    1
+                ),
+                5
+            );
 
     const walletKey =
         normalizeWallet(
@@ -5451,34 +5443,6 @@ async function traceWallet(
     nextVisited.add(
         walletKey
     );
-
-    if (
-        budget.calls >=
-        budget.max
-    ) {
-
-        return {
-
-            wallet,
-
-            blockchain:
-                network,
-
-            depth: 0,
-
-            transactions: [],
-
-            counterparties: [],
-
-            nodes: [],
-
-            edges: [],
-
-            truncated: true
-        };
-    }
-
-    budget.calls++;
 
     const indexed =
         await scalableBlockchainIndex(
@@ -5562,29 +5526,18 @@ async function traceWallet(
     /*
      * Limit branching so that a large wallet
      * cannot create an uncontrolled recursive
-     * request tree. A branching factor of 10
-     * combined with depth was causing 10^depth
-     * calls and tripping the provider's rate
-     * limit — 4 keeps the tree from exploding
-     * while still surfacing the main flows.
+     * request tree.
      */
 
     const nextAddresses =
         counterparties.slice(
             0,
-            4
+            10
         );
 
     for (
         const nextAddress of nextAddresses
     ) {
-
-        if (
-            budget.calls >=
-            budget.max
-        ) {
-            break;
-        }
 
         const nextKey =
             normalizeWallet(
@@ -5599,10 +5552,6 @@ async function traceWallet(
             continue;
         }
 
-        // Pace out recursive calls so we don't
-        // burst the upstream API's per-second limit.
-        await sleep(220);
-
         try {
 
             const child =
@@ -5611,8 +5560,7 @@ async function traceWallet(
                     network,
                     token,
                     maxDepth,
-                    nextVisited,
-                    budget
+                    nextVisited
                 );
 
             result.children.push(
@@ -5638,6 +5586,71 @@ async function traceWallet(
     }
 
     return result;
+}
+
+
+/* =========================================================
+   FLATTEN TRACE TRANSACTIONS
+========================================================= */
+
+function flattenTraceTransactions(
+    trace,
+    output = [],
+    visited = new Set()
+) {
+    if (
+        !trace ||
+        !trace.wallet
+    ) {
+        return output;
+    }
+
+    const walletKey =
+        normalizeWallet(
+            trace.wallet
+        );
+
+    if (
+        visited.has(
+            walletKey
+        )
+    ) {
+        return output;
+    }
+
+    visited.add(
+        walletKey
+    );
+
+    for (
+        const tx of
+        trace.transactions ||
+        []
+    ) {
+        output.push({
+            ...tx,
+            trace_level:
+                trace.current_depth ||
+                trace.depth ||
+                1,
+            traced_wallet:
+                trace.wallet
+        });
+    }
+
+    for (
+        const child of
+        trace.children ||
+        []
+    ) {
+        flattenTraceTransactions(
+            child,
+            output,
+            visited
+        );
+    }
+
+    return output;
 }
 
 
@@ -5887,16 +5900,23 @@ app.post(
                     "USDT"
                 ).toUpperCase();
 
+            const depthValue =
+                safeString(
+                    req.body?.depth
+                ).toLowerCase();
+
             const depth =
-                Math.min(
-                    Math.max(
-                        Number(
-                            req.body?.depth
-                        ) || 2,
-                        1
-                    ),
-                    5
-                );
+                depthValue === "all"
+                    ? "all"
+                    : Math.min(
+                        Math.max(
+                            Number(
+                                depthValue
+                            ) || 1,
+                            1
+                        ),
+                        5
+                    );
 
             if (!wallet) {
 
@@ -6127,125 +6147,81 @@ async function checkRealtimeWatcher(
                     )
             );
 
-        const now =
-            Date.now();
+        const newTransactions =
+            [];
 
-        const trackingStart =
-            new Date(
-                watcher.trackingStartedAt
-            ).getTime();
+        for (
+            const tx of normalized
+        ) {
 
-        const pastCutoff =
-            now -
-            24 * 60 * 60 * 1000;
+            if (
+                !tx.hash
+            ) {
+                continue;
+            }
 
-        const past =
-            normalized.filter(
-                tx => {
-                    const t = Number(
-                        tx.timestampMs ||
-                        tx.block_timestamp ||
-                        tx.timestamp ||
-                        0
-                    );
-                    return t >= pastCutoff && t < trackingStart;
-                }
+            if (
+                watcher.seenHashes.has(
+                    tx.hash
+                )
+            ) {
+                continue;
+            }
+
+            watcher.seenHashes.add(
+                tx.hash
             );
 
-        watcher.past24hTransactions =
-            past.slice(
-                0,
-                2000
-            );
+            /*
+             * Do not alert for the first historical
+             * batch when the watcher is initialized.
+             */
 
-        const newTransactions = [];
+            if (
+                watcher.initialized
+            ) {
 
-        for (const tx of normalized) {
-
-            if (!tx.hash) continue;
-
-            const txTime =
-                Number(
-                    tx.timestampMs ||
-                    tx.block_timestamp ||
-                    tx.timestamp ||
-                    0
+                newTransactions.push(
+                    tx
                 );
-
-            if (!watcher.seenHashes.has(tx.hash)) {
-
-                watcher.seenHashes.add(tx.hash);
-
-                if (
-                    watcher.initialized &&
-                    txTime >= trackingStart &&
-                    txTime <= now
-                ) {
-                    newTransactions.push(tx);
-                }
             }
         }
 
-        if (!watcher.initialized) {
-            watcher.initialized = true;
+        if (
+            !watcher.initialized
+        ) {
+
+            watcher.initialized =
+                true;
+
+            watcher.lastCheck =
+                new Date().toISOString();
+
+            return {
+
+                newTransactions:
+                    [],
+
+                alerts:
+                    []
+            };
         }
 
-        const existingFuture =
-            Array.isArray(
-                watcher.future24hTransactions
-            )
-                ? watcher.future24hTransactions
-                : [];
+        const alerts =
+            [];
 
-        const futureMap =
-            new Map();
+        for (
+            const tx of newTransactions
+        ) {
 
-        for (const tx of existingFuture) {
-            if (tx?.hash) {
-                futureMap.set(tx.hash, tx);
-            }
-        }
-
-        for (const tx of newTransactions) {
-            if (tx?.hash) {
-                futureMap.set(tx.hash, tx);
-            }
-        }
-
-        watcher.future24hTransactions =
-            Array.from(
-                futureMap.values()
-            )
-            .filter(
-                tx => {
-                    const t = Number(
-                        tx.timestampMs ||
-                        tx.block_timestamp ||
-                        tx.timestamp ||
-                        0
-                    );
-                    return t >= trackingStart &&
-                        t <= trackingStart + 24 * 60 * 60 * 1000;
-                }
-            )
-            .sort(
-                (a,b) =>
-                    Number(b.timestampMs || b.block_timestamp || b.timestamp || 0) -
-                    Number(a.timestampMs || a.block_timestamp || a.timestamp || 0)
-            )
-            .slice(
-                0,
-                2000
-            );
-
-        const alerts = [];
-
-        for (const tx of newTransactions) {
-            alerts.push(
+            const alert =
                 createRealtimeAlert(
                     watcher,
                     tx
-                )
+                );
+
+            alerts.push(
+                alert
             );
         }
 
@@ -6259,11 +6235,15 @@ async function checkRealtimeWatcher(
             null;
 
         return {
+
             newTransactions,
+
             alerts
         };
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
         watcher.lastError =
             error.message;
@@ -6278,122 +6258,18 @@ async function checkRealtimeWatcher(
         );
 
         return {
-            newTransactions: [],
-            alerts: [],
-            error: error.message
+
+            newTransactions:
+                [],
+
+            alerts:
+                [],
+
+            error:
+                error.message
         };
     }
 }
-
-
-
-/* =========================================================
-   EVIDENCE PRESERVATION
-========================================================= */
-
-app.post(
-    "/api/evidence/preserve",
-    (
-        req,
-        res
-    ) => {
-
-        try {
-
-            const wallet =
-                safeString(
-                    req.body?.wallet
-                );
-
-            if (!wallet) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Wallet address is required."
-                });
-            }
-
-            const evidencePayload = {
-                wallet,
-                blockchain:
-                    safeString(req.body?.blockchain) || "tron",
-                token:
-                    safeString(req.body?.token) || "USDT",
-                transactions:
-                    Array.isArray(req.body?.transactions)
-                        ? req.body.transactions
-                        : [],
-                risk:
-                    req.body?.risk || null,
-                riskText:
-                    req.body?.riskText || "",
-                alerts:
-                    Array.isArray(req.body?.alerts)
-                        ? req.body.alerts
-                        : [],
-                fraudTypologies:
-                    Array.isArray(req.body?.fraudTypologies)
-                        ? req.body.fraudTypologies
-                        : [],
-                recommendations:
-                    Array.isArray(req.body?.recommendations)
-                        ? req.body.recommendations
-                        : [],
-                complaintCrossReference:
-                    req.body?.complaintCrossReference || null,
-                vasp:
-                    req.body?.vasp || null
-            };
-
-            const caseId =
-                "CT-" +
-                Date.now().toString(36).toUpperCase() +
-                "-" +
-                crypto.randomBytes(4).toString("hex").toUpperCase();
-
-            const evidence = {
-                caseId,
-                wallet: evidencePayload.wallet,
-                blockchain: evidencePayload.blockchain,
-                token: evidencePayload.token,
-                preservedAt: new Date().toISOString(),
-                transactionCount:
-                    evidencePayload.transactions.length,
-                integrityHash:
-                    createHash(
-                        JSON.stringify(
-                            evidencePayload
-                        )
-                    ),
-                evidence:
-                    evidencePayload
-            };
-
-            preservedEvidence.set(
-                caseId,
-                evidence
-            );
-
-            return res.json({
-                success: true,
-                evidence
-            });
-
-        } catch (error) {
-
-            console.error(
-                "EVIDENCE PRESERVATION ERROR:",
-                error
-            );
-
-            return res.status(500).json({
-                success: false,
-                error:
-                    error.message ||
-                    "Evidence preservation failed."
-            });
-        }
-    }
-);
 
 
 /* =========================================================
@@ -6489,24 +6365,6 @@ app.post(
                     createdAt:
                         new Date().toISOString(),
 
-                    trackingStartedAt:
-                        new Date().toISOString(),
-
-                    windowHours:
-                        Math.min(
-                            Math.max(
-                                Number(req.body?.windowHours) || 24,
-                                1
-                            ),
-                            24
-                        ),
-
-                    past24hTransactions:
-                        [],
-
-                    future24hTransactions:
-                        [],
-
                     lastCheck:
                         null,
 
@@ -6542,30 +6400,6 @@ app.post(
                 watcher.active =
                     true;
 
-                watcher.trackingStartedAt =
-                    new Date().toISOString();
-
-                watcher.windowHours =
-                    Math.min(
-                        Math.max(
-                            Number(req.body?.windowHours) || 24,
-                            1
-                        ),
-                        24
-                    );
-
-                watcher.past24hTransactions =
-                    [];
-
-                watcher.future24hTransactions =
-                    [];
-
-                watcher.seenHashes =
-                    new Set();
-
-                watcher.initialized =
-                    false;
-
                 watcher.lastError =
                     null;
             }
@@ -6595,12 +6429,6 @@ app.post(
 
                 watcherCount:
                     realtimeWatchers.size,
-
-                trackingStartedAt:
-                    watcher.trackingStartedAt,
-
-                windowHours:
-                    watcher.windowHours,
 
                 message:
                     "Real-time wallet monitoring started."
@@ -6790,18 +6618,6 @@ app.get(
                 transactionCount:
                     watcher.lastTransactionCount,
 
-                trackingStartedAt:
-                    watcher.trackingStartedAt,
-
-                windowHours:
-                    watcher.windowHours,
-
-                past24hCount:
-                    watcher.past24hTransactions?.length || 0,
-
-                future24hCount:
-                    watcher.future24hTransactions?.length || 0,
-
                 watcherCount:
                     realtimeWatchers.size
             });
@@ -6832,99 +6648,6 @@ app.get(
                 0
                     ? "Real-time monitoring is active."
                     : "Real-time monitoring is inactive."
-        });
-    }
-);
-
-
-/* =========================================================
-   REALTIME 24-HOUR DATA
-========================================================= */
-
-app.get(
-    "/api/realtime/24h",
-    (
-        req,
-        res
-    ) => {
-
-        const wallet =
-            safeString(
-                req.query?.wallet
-            );
-
-        if (!wallet) {
-            return res.status(400).json({
-                success: false,
-                error: "Wallet address is required."
-            });
-        }
-
-        const watcher =
-            realtimeWatchers.get(
-                normalizeWallet(wallet)
-            );
-
-        if (!watcher) {
-            return res.json({
-                success: true,
-                watching: false,
-                wallet,
-                past24hTransactions: [],
-                future24hTransactions: [],
-                past24hCount: 0,
-                future24hCount: 0,
-                trackingStartedAt: null,
-                windowHours: 24
-            });
-        }
-
-        const start =
-            new Date(
-                watcher.trackingStartedAt
-            ).getTime();
-
-        const now =
-            Date.now();
-
-        const expired =
-            now >=
-            start + 24 * 60 * 60 * 1000;
-
-        if (expired) {
-            watcher.active = false;
-        }
-
-        return res.json({
-            success: true,
-            watching: watcher.active,
-            wallet: watcher.wallet,
-            blockchain: watcher.blockchain,
-            blockchain_name:
-                getBlockchainName(
-                    watcher.blockchain
-                ),
-            token: watcher.token,
-            trackingStartedAt:
-                watcher.trackingStartedAt,
-            windowHours: 24,
-            timeRemainingMs:
-                Math.max(
-                    0,
-                    start + 24 * 60 * 60 * 1000 - now
-                ),
-            past24hTransactions:
-                watcher.past24hTransactions || [],
-            future24hTransactions:
-                watcher.future24hTransactions || [],
-            past24hCount:
-                watcher.past24hTransactions?.length || 0,
-            future24hCount:
-                watcher.future24hTransactions?.length || 0,
-            lastCheck:
-                watcher.lastCheck,
-            lastError:
-                watcher.lastError
         });
     }
 );
@@ -7127,11 +6850,7 @@ app.get(
 
                 "POST /api/trace",
 
-                "POST /api/evidence/preserve",
-
                 "POST /api/realtime/watch",
-
-                "GET /api/realtime/24h",
 
                 "POST /api/realtime/unwatch",
 
