@@ -94,6 +94,16 @@ const SAHYOG_API_URL = (
     process.env.SAHYOG_API_URL || ""
 ).trim();
 
+const SOLANA_RPC_URL = (
+    process.env.SOLANA_RPC_URL ||
+    "https://api.mainnet-beta.solana.com"
+).replace(/\/+$/, "");
+
+const SOLANA_USDT_MINT = (
+    process.env.USDT_SOLANA_MINT ||
+    ""
+).trim();
+
 
 /* =========================================================
    DATA FILES
@@ -284,6 +294,26 @@ function normalizeAddress(
 }
 
 
+function normalizeWallet(
+    address
+) {
+    return safeString(
+        address
+    ).toLowerCase();
+}
+
+
+function sameWallet(
+    a,
+    b
+) {
+    return (
+        normalizeWallet(a) ===
+        normalizeWallet(b)
+    );
+}
+
+
 function shortenAddress(
     address,
     start = 8,
@@ -368,7 +398,6 @@ function getBlockchainName(
         case "bnb-chain":
             return "BNB Chain";
 
-        case "tron":
         default:
             return "TRON";
     }
@@ -384,12 +413,9 @@ function normalizeBlockchain(
         ).toLowerCase();
 
     if (
-        value ===
-            "ethereum" ||
-        value ===
-            "eth" ||
-        value ===
-            "ethereum-usdt"
+        value === "ethereum" ||
+        value === "eth" ||
+        value === "ethereum-usdt"
     ) {
         return "ethereum";
     }
@@ -397,10 +423,8 @@ function normalizeBlockchain(
     if (
         value === "bnb" ||
         value === "bsc" ||
-        value ===
-            "bnb-chain" ||
-        value ===
-            "bnb-usdt"
+        value === "bnb-chain" ||
+        value === "bnb-usdt"
     ) {
         return "bnb";
     }
@@ -418,8 +442,7 @@ function getChainId(
         );
 
     if (
-        network ===
-        "ethereum"
+        network === "ethereum"
     ) {
         return 1;
     }
@@ -443,8 +466,7 @@ function getUsdtContract(
         );
 
     if (
-        network ===
-        "ethereum"
+        network === "ethereum"
     ) {
         return ETH_USDT_CONTRACT;
     }
@@ -472,8 +494,7 @@ function getExplorerBase(
         );
 
     if (
-        network ===
-        "ethereum"
+        network === "ethereum"
     ) {
         return "https://etherscan.io";
     }
@@ -492,17 +513,10 @@ function getAddressExplorerUrl(
     address,
     blockchain
 ) {
-    const base =
-        getExplorerBase(
-            blockchain
-        );
-
     return (
-        base +
+        getExplorerBase(blockchain) +
         "/address/" +
-        encodeURIComponent(
-            address
-        )
+        encodeURIComponent(address)
     );
 }
 
@@ -517,14 +531,11 @@ function getTransactionExplorerUrl(
         );
 
     if (
-        network ===
-        "ethereum"
+        network === "ethereum"
     ) {
         return (
             "https://etherscan.io/tx/" +
-            encodeURIComponent(
-                txHash
-            )
+            encodeURIComponent(txHash)
         );
     }
 
@@ -533,17 +544,13 @@ function getTransactionExplorerUrl(
     ) {
         return (
             "https://bscscan.com/tx/" +
-            encodeURIComponent(
-                txHash
-            )
+            encodeURIComponent(txHash)
         );
     }
 
     return (
         "https://tronscan.org/#/transaction/" +
-        encodeURIComponent(
-            txHash
-        )
+        encodeURIComponent(txHash)
     );
 }
 
@@ -572,9 +579,7 @@ function roundNumber(
     decimals = 6
 ) {
     const number =
-        toNumber(
-            value
-        );
+        toNumber(value);
 
     const factor =
         Math.pow(
@@ -611,88 +616,74 @@ function formatAmount(
    DATE HELPERS
 ========================================================= */
 
-function parseTimestamp(
+function toTimestamp(
     value
 ) {
     if (
         value === null ||
-        value === undefined
+        value === undefined ||
+        value === ""
     ) {
-        return null;
+        return 0;
     }
 
-    const numeric =
+    const number =
         Number(value);
 
     if (
-        Number.isFinite(
-            numeric
-        )
+        Number.isFinite(number)
     ) {
         if (
-            numeric <
-            100000000000
+            number < 100000000000
         ) {
-            return new Date(
-                numeric * 1000
-            );
+            return number * 1000;
         }
 
-        return new Date(
-            numeric
-        );
+        return number;
     }
 
     const parsed =
-        new Date(
-            value
+        Date.parse(
+            String(value)
         );
 
-    if (
-        Number.isNaN(
-            parsed.getTime()
-        )
-    ) {
-        return null;
-    }
-
-    return parsed;
+    return Number.isFinite(
+        parsed
+    )
+        ? parsed
+        : 0;
 }
 
 
 function formatDate(
     value
 ) {
-    const date =
-        parseTimestamp(
-            value
-        );
+    const timestamp =
+        toTimestamp(value);
 
-    if (!date) {
-        return null;
+    if (!timestamp) {
+        return "";
     }
 
-    return date.toISOString();
+    return new Date(
+        timestamp
+    ).toISOString();
 }
 
 
 /* =========================================================
-   HASH HELPERS
+   HASH
 ========================================================= */
 
-function createHash(
+function hashObject(
     value
 ) {
     return crypto
-        .createHash(
-            "sha256"
-        )
+        .createHash("sha256")
         .update(
-            String(value)
+            JSON.stringify(value)
         )
-        .digest(
-            "hex"
-        );
+        .digest("hex");
 }
 
 
@@ -703,20 +694,20 @@ function createHash(
 async function fetchJson(
     url,
     options = {},
-    timeoutMs = 20000
+    timeout = 20000
 ) {
     const controller =
         new AbortController();
 
-    const timeout =
+    const timer =
         setTimeout(
-            () => {
-                controller.abort();
-            },
-            timeoutMs
+            () =>
+                controller.abort(),
+            timeout
         );
 
     try {
+
         const response =
             await fetch(
                 url,
@@ -734,53 +725,44 @@ async function fetchJson(
 
         try {
             data =
-                text
-                    ? JSON.parse(
-                          text
-                      )
-                    : null;
+                JSON.parse(text);
         } catch {
-            data = text;
+            data = {
+                raw: text
+            };
         }
 
         if (
             !response.ok
         ) {
-            const error =
-                new Error(
-                    `HTTP ${response.status}`
-                );
-
-            error.status =
-                response.status;
-
-            error.data =
-                data;
-
-            throw error;
+            throw new Error(
+                `HTTP ${response.status}: ${
+                    typeof data === "string"
+                        ? data
+                        : JSON.stringify(data)
+                }`
+            );
         }
 
         return data;
 
     } finally {
-        clearTimeout(
-            timeout
-        );
+        clearTimeout(timer);
     }
 }
 
 
 /* =========================================================
-   CACHE HELPERS
+   CACHE
 ========================================================= */
 
 function getCache(
-    key
+    cache,
+    key,
+    ttl
 ) {
     const item =
-        transactionCache.get(
-            key
-        );
+        cache.get(key);
 
     if (!item) {
         return null;
@@ -789,12 +771,9 @@ function getCache(
     if (
         Date.now() -
             item.timestamp >
-        INDEXER_CACHE_TTL
+        ttl
     ) {
-        transactionCache.delete(
-            key
-        );
-
+        cache.delete(key);
         return null;
     }
 
@@ -803,55 +782,11 @@ function getCache(
 
 
 function setCache(
+    cache,
     key,
     value
 ) {
-    transactionCache.set(
-        key,
-        {
-            timestamp:
-                Date.now(),
-            value
-        }
-    );
-
-    return value;
-}
-
-
-function getAnalysisCache(
-    key
-) {
-    const item =
-        analysisCache.get(
-            key
-        );
-
-    if (!item) {
-        return null;
-    }
-
-    if (
-        Date.now() -
-            item.timestamp >
-        INDEXER_CACHE_TTL
-    ) {
-        analysisCache.delete(
-            key
-        );
-
-        return null;
-    }
-
-    return item.value;
-}
-
-
-function setAnalysisCache(
-    key,
-    value
-) {
-    analysisCache.set(
+    cache.set(
         key,
         {
             timestamp:
@@ -865,1426 +800,85 @@ function setAnalysisCache(
 
 
 /* =========================================================
-   TRON ADDRESS CONVERSION
-========================================================= */
-
-function hexToBase58(
-    hexAddress
-) {
-    try {
-        if (
-            !hexAddress
-        ) {
-            return null;
-        }
-
-        let hex =
-            String(
-                hexAddress
-            ).replace(
-                /^0x/i,
-                ""
-            );
-
-        if (
-            hex.length === 42 &&
-            hex.startsWith(
-                "41"
-            )
-        ) {
-            // already TRON 21-byte hex
-        } else if (
-            hex.length === 40
-        ) {
-            hex =
-                "41" +
-                hex;
-        }
-
-        if (
-            hex.length !== 42
-        ) {
-            return null;
-        }
-
-        const payload =
-            Buffer.from(
-                hex,
-                "hex"
-            );
-
-        const checksum =
-            crypto
-                .createHash(
-                    "sha256"
-                )
-                .update(
-                    payload
-                )
-                .digest();
-
-        const checksum2 =
-            crypto
-                .createHash(
-                    "sha256"
-                )
-                .update(
-                    checksum
-                )
-                .digest();
-
-        const finalBuffer =
-            Buffer.concat([
-                payload,
-                checksum2.subarray(
-                    0,
-                    4
-                )
-            ]);
-
-        return base58Encode(
-            finalBuffer
-        );
-
-    } catch {
-        return null;
-    }
-}
-
-
-function base58Encode(
-    buffer
-) {
-    const alphabet =
-        "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-
-    let value =
-        BigInt(
-            "0x" +
-                buffer.toString(
-                    "hex"
-                )
-        );
-
-    let result = "";
-
-    while (
-        value > 0n
-    ) {
-        const mod =
-            Number(
-                value %
-                    58n
-            );
-
-        result =
-            alphabet[mod] +
-            result;
-
-        value /=
-            58n;
-    }
-
-    for (
-        let i = 0;
-        i < buffer.length &&
-        buffer[i] === 0;
-        i++
-    ) {
-        result =
-            "1" +
-            result;
-    }
-
-    return result;
-}
-
-
-/* =========================================================
-   TRON URL BUILDER
-========================================================= */
-
-function buildTronUrl(
-    pathname,
-    params = {}
-) {
-    const url =
-        new URL(
-            TRON_API +
-                pathname
-        );
-
-    Object.entries(
-        params
-    ).forEach(
-        ([key, value]) => {
-            if (
-                value !==
-                    undefined &&
-                value !== null
-            ) {
-                url.searchParams.set(
-                    key,
-                    String(value)
-                );
-            }
-        }
-    );
-
-    return url.toString();
-}
-
-
-/* =========================================================
-   ETHERSCAN URL BUILDER
-========================================================= */
-
-function buildEtherscanUrl(
-    blockchain,
-    params = {}
-) {
-    const url =
-        new URL(
-            ETHERSCAN_API_BASE
-        );
-
-    const chainId =
-        getChainId(
-            blockchain
-        );
-
-    url.searchParams.set(
-        "chainid",
-        String(
-            chainId
-        )
-    );
-
-    Object.entries(
-        params
-    ).forEach(
-        ([key, value]) => {
-            if (
-                value !==
-                    undefined &&
-                value !== null
-            ) {
-                url.searchParams.set(
-                    key,
-                    String(value)
-                );
-            }
-        }
-    );
-
-    if (
-        ETHERSCAN_API_KEY
-    ) {
-        url.searchParams.set(
-            "apikey",
-            ETHERSCAN_API_KEY
-        );
-    }
-
-    return url.toString();
-}
-
-
-/* =========================================================
-   TRON TRC-20 FETCH
-========================================================= */
-
-async function fetchTronUsdtTransfers(
-    address,
-    options = {}
-) {
-    const wallet =
-        normalizeAddress(
-            address
-        );
-
-    const cacheKey =
-        [
-            "tron",
-            "usdt",
-            wallet.toLowerCase(),
-            options.limit || 200,
-            options.maxPages ||
-                INDEXER_MAX_PAGES
-        ].join(":");
-
-    const cached =
-        getCache(
-            cacheKey
-        );
-
-    if (cached) {
-        return cached;
-    }
-
-    const transactions = [];
-
-    let fingerprint =
-        null;
-
-    const maxPages =
-        Math.min(
-            Math.max(
-                Number(
-                    options.maxPages
-                ) ||
-                    INDEXER_MAX_PAGES,
-                1
-            ),
-            100
-        );
-
-    const limit =
-        Math.min(
-            Math.max(
-                Number(
-                    options.limit
-                ) || 200,
-                1
-            ),
-            200
-        );
-
-    for (
-        let page = 0;
-        page < maxPages;
-        page++
-    ) {
-        const params = {
-            limit,
-            only_confirmed:
-                true,
-            contract_address:
-                USDT_CONTRACT,
-            order_by:
-                "block_timestamp,desc"
-        };
-
-        if (
-            fingerprint
-        ) {
-            params.fingerprint =
-                fingerprint;
-        }
-
-        const url =
-            buildTronUrl(
-                `/v1/accounts/${encodeURIComponent(
-                    wallet
-                )}/transactions/trc20`,
-                params
-            );
-
-        let data;
-
-        try {
-            data =
-                await fetchJson(
-                    url,
-                    {
-                        headers:
-                            TRON_HEADERS
-                    }
-                );
-        } catch (
-            error
-        ) {
-            console.error(
-                "TRON USDT FETCH ERROR:",
-                error.message
-            );
-
-            if (
-                error.data
-            ) {
-                console.error(
-                    "TRON ERROR DATA:",
-                    error.data
-                );
-            }
-
-            throw error;
-        }
-
-        const rows =
-            Array.isArray(
-                data?.data
-            )
-                ? data.data
-                : [];
-
-        transactions.push(
-            ...rows
-        );
-
-        const nextFingerprint =
-            data?.meta
-                ?.fingerprint ||
-            null;
-
-        if (
-            !nextFingerprint ||
-            rows.length <
-                limit
-        ) {
-            break;
-        }
-
-        fingerprint =
-            nextFingerprint;
-    }
-
-    return setCache(
-        cacheKey,
-        transactions
-    );
-}
-
-
-/* =========================================================
-   TRON NATIVE TRX FETCH
-========================================================= */
-
-async function fetchTronNativeTransfers(
-    address,
-    options = {}
-) {
-    const wallet =
-        normalizeAddress(
-            address
-        );
-
-    const cacheKey =
-        [
-            "tron",
-            "trx",
-            wallet.toLowerCase(),
-            options.limit || 200,
-            options.maxPages ||
-                INDEXER_MAX_PAGES
-        ].join(":");
-
-    const cached =
-        getCache(
-            cacheKey
-        );
-
-    if (cached) {
-        return cached;
-    }
-
-    const transactions = [];
-
-    let fingerprint =
-        null;
-
-    const maxPages =
-        Math.min(
-            Math.max(
-                Number(
-                    options.maxPages
-                ) ||
-                    INDEXER_MAX_PAGES,
-                1
-            ),
-            100
-        );
-
-    const limit =
-        Math.min(
-            Math.max(
-                Number(
-                    options.limit
-                ) || 200,
-                1
-            ),
-            200
-        );
-
-    for (
-        let page = 0;
-        page < maxPages;
-        page++
-    ) {
-        const params = {
-            limit,
-            only_confirmed:
-                true,
-            order_by:
-                "block_timestamp,desc"
-        };
-
-        if (
-            fingerprint
-        ) {
-            params.fingerprint =
-                fingerprint;
-        }
-
-        const url =
-            buildTronUrl(
-                `/v1/accounts/${encodeURIComponent(
-                    wallet
-                )}/transactions`,
-                params
-            );
-
-        let data;
-
-        try {
-            data =
-                await fetchJson(
-                    url,
-                    {
-                        headers:
-                            TRON_HEADERS
-                    }
-                );
-        } catch (
-            error
-        ) {
-            console.error(
-                "TRON TRX FETCH ERROR:",
-                error.message
-            );
-
-            throw error;
-        }
-
-        const rows =
-            Array.isArray(
-                data?.data
-            )
-                ? data.data
-                : [];
-
-        for (
-            const tx of rows
-        ) {
-            const contract =
-                tx
-                    ?.raw_data
-                    ?.contract?.[0];
-
-            if (
-                contract?.type !==
-                "TransferContract"
-            ) {
-                continue;
-            }
-
-            const value =
-                contract
-                    ?.parameter
-                    ?.value;
-
-            if (!value) {
-                continue;
-            }
-
-            const from =
-                hexToBase58(
-                    value.owner_address
-                );
-
-            const to =
-                hexToBase58(
-                    value
-                        .to_address
-                );
-
-            const amount =
-                toNumber(
-                    value
-                        .amount
-                ) /
-                1e6;
-
-            transactions.push({
-                transaction_id:
-                    tx.txID,
-                from,
-                to,
-                value: amount,
-                token: "TRX",
-                block_timestamp:
-                    tx.block_timestamp,
-                confirmed:
-                    true,
-                type:
-                    "TransferContract"
-            });
-        }
-
-        const nextFingerprint =
-            data?.meta
-                ?.fingerprint ||
-            null;
-
-        if (
-            !nextFingerprint ||
-            rows.length <
-                limit
-        ) {
-            break;
-        }
-
-        fingerprint =
-            nextFingerprint;
-    }
-
-    return setCache(
-        cacheKey,
-        transactions
-    );
-}
-
-/* =========================================================
-   TRON GET
-========================================================= */
-
-async function tronGet(
-    endpoint,
-    params = {}
-) {
-    const url =
-        new URL(
-            TRON_API + endpoint
-        );
-
-    Object.entries(params).forEach(
-        ([key, value]) => {
-            if (
-                value !== undefined &&
-                value !== null
-            ) {
-                url.searchParams.set(
-                    key,
-                    String(value)
-                );
-            }
-        }
-    );
-
-    console.log(
-        "TRON GET:",
-        url.toString()
-    );
-
-    const response =
-        await fetch(
-            url,
-            {
-                method: "GET",
-                headers: TRON_HEADERS
-            }
-        );
-
-    const text =
-        await response.text();
-
-    let data = {};
-
-    try {
-        data =
-            text
-                ? JSON.parse(text)
-                : {};
-    } catch {
-        data = {
-            raw: text
-        };
-    }
-
-    if (!response.ok) {
-
-        console.error(
-            "TRON API ERROR:",
-            response.status,
-            data
-        );
-
-        if (
-            response.status === 401
-        ) {
-            throw new Error(
-                "TRON API 401 Unauthorized. Check TRON_API_KEY."
-            );
-        }
-
-        if (
-            response.status === 403
-        ) {
-            throw new Error(
-                "TRON API 403 Forbidden. Check API key permissions."
-            );
-        }
-
-        if (
-            response.status === 429
-        ) {
-            throw new Error(
-                "TRON API rate limit reached."
-            );
-        }
-
-        throw new Error(
-            `TRON API error: ${response.status}`
-        );
-    }
-
-    return data;
-}
-
-
-/* =========================================================
-   PAGINATED TRC-20 USDT INDEXER
-========================================================= */
-
-async function getTrc20Transactions(
-    address,
-    maxPages = INDEXER_MAX_PAGES
-) {
-
-    const allTransactions = [];
-    const seenHashes = new Set();
-
-    let fingerprint = null;
-
-    for (
-        let page = 0;
-        page < maxPages;
-        page++
-    ) {
-
-        const params = {
-
-            limit: 200,
-
-            only_confirmed:
-                true,
-
-            contract_address:
-                USDT_CONTRACT,
-
-            order_by:
-                "block_timestamp,desc"
-        };
-
-        if (fingerprint) {
-            params.fingerprint =
-                fingerprint;
-        }
-
-        const data =
-            await tronGet(
-                `/v1/accounts/${address}/transactions/trc20`,
-                params
-            );
-
-        const pageTransactions =
-            Array.isArray(data.data)
-                ? data.data
-                : [];
-
-        if (
-            pageTransactions.length === 0
-        ) {
-            break;
-        }
-
-        for (
-            const tx of pageTransactions
-        ) {
-
-            const hash =
-                tx.transaction_id;
-
-            if (
-                hash &&
-                !seenHashes.has(hash)
-            ) {
-
-                seenHashes.add(hash);
-
-                allTransactions.push(
-                    tx
-                );
-            }
-        }
-
-        fingerprint =
-            data.meta?.finger ||
-            data.meta?.fingerprint ||
-            null;
-
-        if (
-            !fingerprint ||
-            pageTransactions.length < 200
-        ) {
-            break;
-        }
-    }
-
-    return allTransactions;
-}
-
-
-/* =========================================================
-   PAGINATED NATIVE TRX INDEXER
-========================================================= */
-
-function tronHexToBase58(address) {
-
-    if (!address) {
-        return "";
-    }
-
-    if (
-        address.startsWith("T")
-    ) {
-        return address;
-    }
-
-    const hex =
-        address.replace(
-            /^0x/,
-            ""
-        );
-
-    if (
-        !/^[0-9a-fA-F]{42}$/.test(
-            hex
-        )
-    ) {
-        return address;
-    }
-
-    const payload =
-        Buffer.from(
-            hex,
-            "hex"
-        );
-
-    const checksum =
-        crypto
-            .createHash(
-                "sha256"
-            )
-            .update(
-                crypto
-                    .createHash(
-                        "sha256"
-                    )
-                    .update(
-                        payload
-                    )
-                    .digest()
-            )
-            .digest()
-            .subarray(
-                0,
-                4
-            );
-
-    const bytes =
-        Buffer.concat([
-            payload,
-            checksum
-        ]);
-
-    const alphabet =
-        "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-
-    let n =
-        BigInt(
-            "0x" +
-            bytes.toString(
-                "hex"
-            )
-        );
-
-    let out = "";
-
-    while (
-        n > 0n
-    ) {
-
-        const r =
-            Number(
-                n % 58n
-            );
-
-        out =
-            alphabet[r] +
-            out;
-
-        n =
-            n / 58n;
-    }
-
-    for (
-        const b of bytes
-    ) {
-
-        if (
-            b !== 0
-        ) {
-            break;
-        }
-
-        out =
-            "1" +
-            out;
-    }
-
-    return out;
-}
-
-
-async function getTrxTransactions(
-    address,
-    maxPages = INDEXER_MAX_PAGES
-) {
-
-    const allTransactions = [];
-    const seenHashes = new Set();
-
-    let fingerprint = null;
-
-    for (
-        let page = 0;
-        page < maxPages;
-        page++
-    ) {
-
-        const params = {
-
-            limit: 200,
-
-            only_confirmed:
-                true,
-
-            order_by:
-                "block_timestamp,desc"
-        };
-
-        if (
-            fingerprint
-        ) {
-            params.fingerprint =
-                fingerprint;
-        }
-
-        const data =
-            await tronGet(
-                `/v1/accounts/${address}/transactions`,
-                params
-            );
-
-        const pageTransactions =
-            Array.isArray(
-                data.data
-            )
-                ? data.data
-                : [];
-
-        if (
-            !pageTransactions.length
-        ) {
-            break;
-        }
-
-        for (
-            const tx of pageTransactions
-        ) {
-
-            const hash =
-                tx.txID ||
-                tx.txid ||
-                tx.transaction_id;
-
-            const contract =
-                tx
-                    .raw_data
-                    ?.contract?.[0];
-
-            const value =
-                contract
-                    ?.parameter
-                    ?.value ||
-                {};
-
-            if (
-                contract?.type !==
-                    "TransferContract" ||
-                !hash
-            ) {
-                continue;
-            }
-
-            const from =
-                tronHexToBase58(
-                    value.owner_address ||
-                    ""
-                );
-
-            const to =
-                tronHexToBase58(
-                    value.to_address ||
-                    ""
-                );
-
-            const amount =
-                Number(
-                    value.amount || 0
-                );
-
-            if (
-                !seenHashes.has(
-                    hash
-                ) &&
-                from &&
-                to &&
-                amount > 0
-            ) {
-
-                seenHashes.add(
-                    hash
-                );
-
-                allTransactions.push({
-
-                    transaction_id:
-                        hash,
-
-                    block_timestamp:
-                        tx.block_timestamp,
-
-                    from,
-
-                    to,
-
-                    value:
-                        String(
-                            amount
-                        ),
-
-                    token_info: {
-                        symbol:
-                            "TRX",
-
-                        decimals:
-                            6
-                    }
-                });
-            }
-        }
-
-        fingerprint =
-            data.meta?.fingerprint ||
-            data.meta?.finger ||
-            null;
-
-        if (
-            !fingerprint ||
-            pageTransactions.length <
-                200
-        ) {
-            break;
-        }
-    }
-
-    return allTransactions;
-}
-
-
-
-function getCachedTransactions(
-    wallet,
-    token = "USDT",
-    blockchain = "tron"
-) {
-
-    const key =
-        `${blockchain}:${normalizeWallet(wallet)}:${String(token).toUpperCase()}`;
-
-    const cached =
-        transactionCache.get(
-            key
-        );
-
-    if (!cached) {
-        return null;
-    }
-
-    if (
-        Date.now() -
-            cached.timestamp >
-        INDEXER_CACHE_TTL
-    ) {
-
-        transactionCache.delete(
-            key
-        );
-
-        return null;
-    }
-
-    return cached.transactions;
-}
-
-
-function setCachedTransactions(
-    wallet,
-    transactions,
-    token = "USDT",
-    blockchain = "tron"
-) {
-
-    const key =
-        `${blockchain}:${normalizeWallet(wallet)}:${String(token).toUpperCase()}`;
-
-    transactionCache.set(
-        key,
-        {
-            timestamp:
-                Date.now(),
-
-            transactions
-        }
-    );
-}
-
-
-/* =========================================================
-   SCALABLE TRON INDEX
-========================================================= */
-
-async function scalableTronIndex(
-    wallet,
-    token = "USDT",
-    blockchain = "tron"
-) {
-
-    const cached =
-        getCachedTransactions(
-            wallet,
-            token,
-            blockchain
-        );
-
-    if (cached) {
-
-        return {
-
-            transactions:
-                cached,
-
-            source:
-                "CACHE"
-        };
-    }
-
-    let transactions = [];
-
-    const normalizedToken =
-        String(
-            token
-        ).toUpperCase();
-
-    if (
-        normalizedToken ===
-        "TRX"
-    ) {
-
-        transactions =
-            await getTrxTransactions(
-                wallet
-            );
-
-    } else {
-
-        transactions =
-            await getTrc20Transactions(
-                wallet
-            );
-    }
-
-    setCachedTransactions(
-        wallet,
-        transactions,
-        normalizedToken,
-        blockchain
-    );
-
-    return {
-
-        transactions,
-
-        source:
-            "TRONGRID"
-    };
-}
-
-
-/* =========================================================
-   MULTICHAIN INDEXER
-========================================================= */
-
-async function scalableBlockchainIndex(
-    wallet,
-    token = "USDT",
-    blockchain = "tron"
-) {
-
-    const network =
-        normalizeBlockchain(
-            blockchain
-        );
-
-    if (
-        network === "tron"
-    ) {
-
-        return scalableTronIndex(
-            wallet,
-            token,
-            network
-        );
-    }
-
-    const normalizedToken =
-        String(
-            token
-        ).toUpperCase();
-
-    if (
-        normalizedToken !==
-        "USDT"
-    ) {
-
-        throw new Error(
-            `${getBlockchainName(
-                network
-            )} currently supports USDT token transfers only.`
-        );
-    }
-
-    const cache =
-        getCachedTransactions(
-            wallet,
-            normalizedToken,
-            network
-        );
-
-    if (cache) {
-
-        return {
-
-            transactions:
-                cache,
-
-            source:
-                "CACHE"
-        };
-    }
-
-    const transactions =
-        await getEvmUsdtTransactions(
-            wallet,
-            network,
-            INDEXER_MAX_PAGES
-        );
-
-    setCachedTransactions(
-        wallet,
-        transactions,
-        normalizedToken,
-        network
-    );
-
-    return {
-
-        transactions,
-
-        source:
-            "ETHERSCAN_V2"
-    };
-}
-
-
-/* =========================================================
-   TRANSACTION NORMALIZATION
+   TRANSACTION NORMALIZER
 ========================================================= */
 
 function normalizeTransaction(
     tx,
-    wallet,
-    blockchain = "tron"
+    blockchain,
+    wallet
 ) {
-
     const network =
         normalizeBlockchain(
             blockchain
-        );
-
-    const walletNormalized =
-        normalizeWallet(
-            wallet
         );
 
     const from =
         tx.from ||
         tx.from_address ||
+        tx.ownerAddress ||
         tx.owner_address ||
+        tx.sender ||
         "";
 
     const to =
         tx.to ||
         tx.to_address ||
+        tx.toAddress ||
+        tx.receiver ||
         "";
 
-    let amount = 0;
-
-    let decimals = 6;
-
-    let symbol =
-        tx.token ||
-        tx.token_info
-            ?.symbol ||
-        "USDT";
-
-    if (
-        tx.token_info
-            ?.decimals !==
-        undefined
-    ) {
-
-        decimals =
-            Number(
-                tx.token_info
-                    .decimals
-            );
-    }
-
-    if (
-        tx.value !==
-        undefined
-    ) {
-
-        const rawValue =
-            String(
-                tx.value
-            );
-
-        if (
-            network !==
-            "tron" &&
-            /^\d+$/.test(
-                rawValue
-            )
-        ) {
-
-            amount =
-                Number(
-                    rawValue
-                ) /
-                Math.pow(
-                    10,
-                    decimals
-                );
-
-        } else {
-
-            const numeric =
-                Number(
-                    rawValue
-                );
-
-            if (
-                Number.isFinite(
-                    numeric
-                )
-            ) {
-
-                if (
-                    network ===
-                    "tron" &&
-                    symbol ===
-                    "USDT"
-                ) {
-
-                    amount =
-                        numeric /
-                        Math.pow(
-                            10,
-                            decimals
-                        );
-
-                } else {
-
-                    amount =
-                        numeric;
-                }
-            }
-        }
-    }
-
-    const fromNormalized =
-        normalizeWallet(
-            from
-        );
-
-    const toNormalized =
-        normalizeWallet(
-            to
-        );
-
-    let direction =
-        "Unknown";
-
-    if (
-        fromNormalized ===
-        walletNormalized
-    ) {
-
-        direction =
-            "Sent";
-
-    } else if (
-        toNormalized ===
-        walletNormalized
-    ) {
-
-        direction =
-            "Received";
-    }
-
     const hash =
-        tx.transaction_id ||
-        tx.txID ||
         tx.hash ||
+        tx.txID ||
+        tx.tx_id ||
+        tx.transaction_id ||
         tx.transactionHash ||
         "";
 
+    let amount =
+        tx.amount ??
+        tx.value ??
+        tx.tokenAmount ??
+        tx.quantity ??
+        0;
+
+    amount =
+        toNumber(
+            amount
+        );
+
     const timestamp =
-        tx.block_timestamp ||
-        tx.timeStamp ||
-        tx.timestamp ||
-        null;
+        toTimestamp(
+            tx.timestamp ||
+            tx.block_timestamp ||
+            tx.timeStamp ||
+            tx.blockTimestamp ||
+            tx.time
+        );
 
-    return {
+    const normalized = {
 
-        hash,
+        hash:
+            safeString(hash),
 
-        transaction_id:
-            hash,
+        tx_hash:
+            safeString(hash),
+
+        from:
+            safeString(from),
+
+        to:
+            safeString(to),
+
+        amount:
+            amount,
+
+        token:
+            tx.token ||
+            tx.token_symbol ||
+            tx.tokenSymbol ||
+            "USDT",
 
         blockchain:
             network,
@@ -2294,2033 +888,983 @@ function normalizeTransaction(
                 network
             ),
 
-        token:
-            symbol,
+        timestamp:
+            timestamp,
 
-        symbol,
-
-        amount:
-            formatAmount(
-                amount
-            ),
-
-        value:
-            amount,
-
-        from,
-
-        to,
-
-        direction,
-
-        timestamp,
-
-        date:
+        datetime:
             formatDate(
                 timestamp
             ),
 
-        explorer_url:
-            getTransactionExplorerUrl(
-                hash,
-                network
-            ),
-
         block:
-            tx.blockNumber ||
             tx.block ||
+            tx.blockNumber ||
+            tx.block_num ||
             null,
 
-        contract:
-            tx._contract ||
-            tx.contractAddress ||
-            getUsdtContract(
-                network
+        confirmed:
+            tx.confirmed !== false,
+
+        explorer:
+            hash
+                ? getTransactionExplorerUrl(
+                      hash,
+                      network
+                  )
+                : "",
+
+        direction:
+            sameWallet(
+                from,
+                wallet
             )
+                ? "out"
+                : sameWallet(
+                      to,
+                      wallet
+                  )
+                    ? "in"
+                    : "unknown"
     };
+
+    return normalized;
 }
 
 
 /* =========================================================
-   SORT TRANSACTIONS
+   SORT
 ========================================================= */
 
 function sortTransactions(
     transactions
 ) {
-
-    return [
-        ...transactions
-    ].sort(
+    return [...transactions].sort(
         (
             a,
             b
-        ) => {
-
-            const ta =
-                Number(
-                    a.timestamp ||
-                    0
-                );
-
-            const tb =
-                Number(
-                    b.timestamp ||
-                    0
-                );
-
-            return tb - ta;
-        }
+        ) =>
+            toNumber(
+                b.timestamp
+            ) -
+            toNumber(
+                a.timestamp
+            )
     );
 }
 
 
 /* =========================================================
-   TRANSACTION SUMMARY
+   TRON TRC20 TRANSACTIONS
 ========================================================= */
 
-function summarizeTransactions(
-    transactions,
-    wallet
+async function getTrc20Transactions(
+    wallet,
+    tokenContract = USDT_CONTRACT
 ) {
-
-    let sentCount = 0;
-
-    let receivedCount = 0;
-
-    let sentAmount = 0;
-
-    let receivedAmount = 0;
-
-    const counterparties =
-        new Set();
-
-    for (
-        const tx of transactions
-    ) {
-
-        const amount =
-            Number(
-                tx.amount ||
-                tx.value ||
-                0
-            );
-
-        if (
-            tx.direction ===
-            "Sent"
-        ) {
-
-            sentCount++;
-
-            sentAmount +=
-                amount;
-
-            if (
-                tx.to
-            ) {
-                counterparties.add(
-                    tx.to
-                );
-            }
-
-        } else if (
-            tx.direction ===
-            "Received"
-        ) {
-
-            receivedCount++;
-
-            receivedAmount +=
-                amount;
-
-            if (
-                tx.from
-            ) {
-                counterparties.add(
-                    tx.from
-                );
-            }
-        }
-    }
-
-    return {
-
-        total:
-            transactions.length,
-
-        sentCount,
-
-        receivedCount,
-
-        sentAmount:
-            formatAmount(
-                sentAmount
-            ),
-
-        receivedAmount:
-            formatAmount(
-                receivedAmount
-            ),
-
-        netFlow:
-            formatAmount(
-                receivedAmount -
-                sentAmount
-            ),
-
-        counterparties:
-            counterparties.size,
-
-        wallet:
+    const address =
+        normalizeAddress(
             wallet
-    };
-}
-/* =========================================================
-   EVM USDT TRANSACTION INDEXER
-   Ethereum + BNB Chain
-========================================================= */
-
-async function getEvmUsdtTransactions(
-    address,
-    blockchain,
-    maxPages = INDEXER_MAX_PAGES
-) {
-
-    const network =
-        normalizeBlockchain(
-            blockchain
         );
 
-    if (
-        network !== "ethereum" &&
-        network !== "bnb"
-    ) {
-        throw new Error(
-            "EVM indexer supports Ethereum and BNB Chain only."
+    const cacheKey =
+        `tron:${address}:${tokenContract}`;
+
+    const cached =
+        getCache(
+            transactionCache,
+            cacheKey,
+            INDEXER_CACHE_TTL
         );
+
+    if (cached) {
+        return cached;
     }
-
-    if (
-        !isValidEvmAddress(
-            address
-        )
-    ) {
-        throw new Error(
-            "Invalid EVM wallet address."
-        );
-    }
-
-    if (
-        !ETHERSCAN_API_KEY
-    ) {
-        throw new Error(
-            "ETHERSCAN_API_KEY is missing in .env"
-        );
-    }
-
-    const contract =
-        getUsdtContract(
-            network
-        );
 
     const transactions = [];
 
-    const seenHashes =
-        new Set();
-
-    const offset = 100;
+    let fingerprint = "";
 
     for (
-        let page = 1;
-        page <= maxPages;
+        let page = 0;
+        page < INDEXER_MAX_PAGES;
         page++
     ) {
 
-        const url =
-            buildEtherscanUrl(
-                network,
-                {
-                    module:
-                        "account",
+        const params =
+            new URLSearchParams();
 
-                    action:
-                        "tokentx",
+        params.set(
+            "limit",
+            "200"
+        );
 
-                    contractaddress:
-                        contract,
+        params.set(
+            "contract_address",
+            tokenContract
+        );
 
-                    address:
-                        address,
-
-                    page,
-
-                    offset,
-
-                    sort:
-                        "desc"
-                }
+        if (fingerprint) {
+            params.set(
+                "fingerprint",
+                fingerprint
             );
+        }
 
-        let data;
+        const url =
+            `${TRON_API}/v1/accounts/${encodeURIComponent(
+                address
+            )}/transactions/trc20?${params.toString()}`;
 
         try {
 
-            data =
+            const data =
                 await fetchJson(
                     url,
                     {
-                        headers: {
-                            Accept:
-                                "application/json"
-                        }
-                    },
-                    20000
+                        headers:
+                            TRON_HEADERS
+                    }
                 );
+
+            const rows =
+                Array.isArray(
+                    data?.data
+                )
+                    ? data.data
+                    : [];
+
+            for (
+                const row of rows
+            ) {
+                transactions.push(
+                    normalizeTransaction(
+                        {
+                            hash:
+                                row.transaction_id,
+                            from:
+                                row.from,
+                            to:
+                                row.to,
+                            amount:
+                                toNumber(
+                                    row.value
+                                ) /
+                                Math.pow(
+                                    10,
+                                    toNumber(
+                                        row.token_info
+                                            ?.decimals,
+                                        6
+                                    )
+                                ),
+                            token:
+                                row.token_info
+                                    ?.symbol ||
+                                "USDT",
+                            timestamp:
+                                row.block_timestamp
+                        },
+                        "tron",
+                        address
+                    )
+                );
+            }
+
+            fingerprint =
+                data?.meta
+                    ?.fingerprint ||
+                "";
+
+            if (
+                !fingerprint ||
+                rows.length === 0
+            ) {
+                break;
+            }
 
         } catch (
             error
         ) {
 
             console.error(
-                "ETHERSCAN FETCH ERROR:",
+                "TRON TRC20 ERROR:",
                 error.message
             );
 
-            throw error;
-        }
-
-        if (
-            data?.status ===
-                "0" &&
-            !Array.isArray(
-                data?.result
-            )
-        ) {
-
-            const message =
-                data?.message ||
-                "Etherscan API request failed.";
-
-            throw new Error(
-                message
-            );
-        }
-
-        const rows =
-            Array.isArray(
-                data?.result
-            )
-                ? data.result
-                : [];
-
-        if (
-            rows.length === 0
-        ) {
-            break;
-        }
-
-        for (
-            const tx of rows
-        ) {
-
-            const hash =
-                tx.hash ||
-                tx.transactionHash ||
-                "";
-
-            if (
-                !hash ||
-                seenHashes.has(
-                    hash
-                )
-            ) {
-                continue;
-            }
-
-            const tokenAddress =
-                String(
-                    tx.contractAddress ||
-                    ""
-                ).toLowerCase();
-
-            if (
-                tokenAddress !==
-                contract.toLowerCase()
-            ) {
-                continue;
-            }
-
-            seenHashes.add(
-                hash
-            );
-
-            transactions.push({
-
-                hash,
-
-                transaction_id:
-                    hash,
-
-                transactionHash:
-                    hash,
-
-                from:
-                    tx.from || "",
-
-                to:
-                    tx.to || "",
-
-                value:
-                    tx.value || "0",
-
-                token:
-                    tx.tokenSymbol ||
-                    "USDT",
-
-                token_info: {
-
-                    symbol:
-                        tx.tokenSymbol ||
-                        "USDT",
-
-                    decimals:
-                        Number(
-                            tx.tokenDecimal ||
-                            6
-                        )
-                },
-
-                contractAddress:
-                    tx.contractAddress ||
-                    contract,
-
-                blockNumber:
-                    tx.blockNumber,
-
-                timeStamp:
-                    tx.timeStamp,
-
-                gas:
-                    tx.gas,
-
-                gasPrice:
-                    tx.gasPrice,
-
-                gasUsed:
-                    tx.gasUsed,
-
-                confirmations:
-                    tx.confirmations
-            });
-        }
-
-        if (
-            rows.length <
-            offset
-        ) {
             break;
         }
     }
 
-    return transactions;
-}
+    const unique =
+        new Map();
 
-
-/* =========================================================
-   NORMALIZE WALLET
-========================================================= */
-
-function normalizeWallet(
-    address
-) {
-
-    return safeString(
-        address
-    ).toLowerCase();
-}
-
-
-/* =========================================================
-   WALLET MATCH
-========================================================= */
-
-function sameWallet(
-    a,
-    b
-) {
-
-    if (
-        !a ||
-        !b
+    for (
+        const tx of transactions
     ) {
-        return false;
+        const key =
+            [
+                tx.hash,
+                tx.from,
+                tx.to,
+                tx.amount
+            ].join("|");
+
+        if (!unique.has(key)) {
+            unique.set(
+                key,
+                tx
+            );
+        }
     }
 
-    return (
-        normalizeWallet(a) ===
-        normalizeWallet(b)
+    const result =
+        sortTransactions(
+            Array.from(
+                unique.values()
+            )
+        );
+
+    return setCache(
+        transactionCache,
+        cacheKey,
+        result
     );
 }
 
 
 /* =========================================================
-   COUNTERPARTY EXTRACTION
+   ETH / BNB ERC20 TRANSACTIONS
 ========================================================= */
 
-function getCounterparty(
-    tx
+async function getEvmUsdtTransactions(
+    wallet,
+    blockchain
 ) {
+    const network =
+        normalizeBlockchain(
+            blockchain
+        );
 
-    if (
-        tx.direction ===
-        "Sent"
-    ) {
-        return tx.to || "";
+    const address =
+        normalizeAddress(
+            wallet
+        );
+
+    const contract =
+        getUsdtContract(
+            network
+        );
+
+    const cacheKey =
+        `${network}:${address}:${contract}`;
+
+    const cached =
+        getCache(
+            transactionCache,
+            cacheKey,
+            INDEXER_CACHE_TTL
+        );
+
+    if (cached) {
+        return cached;
     }
 
-    if (
-        tx.direction ===
-        "Received"
-    ) {
-        return tx.from || "";
+    if (!ETHERSCAN_API_KEY) {
+
+        console.warn(
+            "Etherscan API key missing."
+        );
+
+        return [];
     }
 
-    return "";
-}
+    const chainId =
+        getChainId(
+            network
+        );
 
+    const transactions = [];
 
-/* =========================================================
-   UNIQUE COUNTERPARTIES
-========================================================= */
+    for (
+        let page = 1;
+        page <=
+        INDEXER_MAX_PAGES;
+        page++
+    ) {
 
-function getUniqueCounterparties(
-    transactions
-) {
+        const url =
+            `${ETHERSCAN_API_BASE}?` +
+            new URLSearchParams(
+                {
+                    chainid:
+                        String(
+                            chainId
+                        ),
+                    module:
+                        "account",
+                    action:
+                        "tokentx",
+                    contractaddress:
+                        contract,
+                    address:
+                        address,
+                    page:
+                        String(
+                            page
+                        ),
+                    offset:
+                        "100",
+                    sort:
+                        "desc",
+                    apikey:
+                        ETHERSCAN_API_KEY
+                }
+            ).toString();
 
-    const map =
+        try {
+
+            const data =
+                await fetchJson(
+                    url
+                );
+
+            const rows =
+                Array.isArray(
+                    data?.result
+                )
+                    ? data.result
+                    : [];
+
+            if (
+                rows.length === 0
+            ) {
+                break;
+            }
+
+            for (
+                const row of rows
+            ) {
+
+                const decimals =
+                    toNumber(
+                        row.tokenDecimal,
+                        6
+                    );
+
+                transactions.push(
+                    normalizeTransaction(
+                        {
+                            hash:
+                                row.hash,
+                            from:
+                                row.from,
+                            to:
+                                row.to,
+                            amount:
+                                toNumber(
+                                    row.value
+                                ) /
+                                Math.pow(
+                                    10,
+                                    decimals
+                                ),
+                            token:
+                                row.tokenSymbol ||
+                                "USDT",
+                            timestamp:
+                                row.timeStamp,
+                            block:
+                                row.blockNumber
+                        },
+                        network,
+                        address
+                    )
+                );
+            }
+
+            if (
+                rows.length < 100
+            ) {
+                break;
+            }
+
+        } catch (
+            error
+        ) {
+
+            console.error(
+                `${network} EVM ERROR:`,
+                error.message
+            );
+
+            break;
+        }
+    }
+
+    const unique =
         new Map();
 
     for (
         const tx of transactions
     ) {
 
-        const address =
-            getCounterparty(
+        const key =
+            [
+                tx.hash,
+                tx.from,
+                tx.to,
+                tx.amount
+            ].join("|");
+
+        if (!unique.has(key)) {
+            unique.set(
+                key,
                 tx
             );
+        }
+    }
 
-        if (!address) {
+    const result =
+        sortTransactions(
+            Array.from(
+                unique.values()
+            )
+        );
+
+    return setCache(
+        transactionCache,
+        cacheKey,
+        result
+    );
+}
+
+
+/* =========================================================
+   BLOCKCHAIN INDEXER
+========================================================= */
+
+async function scalableBlockchainIndex(
+    wallet,
+    blockchain,
+    token = "USDT"
+) {
+    const network =
+        normalizeBlockchain(
+            blockchain
+        );
+
+    if (
+        network === "tron"
+    ) {
+        return {
+            transactions:
+                await getTrc20Transactions(
+                    wallet,
+                    getUsdtContract(
+                        network
+                    )
+                )
+        };
+    }
+
+    if (
+        network === "ethereum" ||
+        network === "bnb"
+    ) {
+        return {
+            transactions:
+                await getEvmUsdtTransactions(
+                    wallet,
+                    network
+                )
+        };
+    }
+
+    return {
+        transactions: []
+    };
+}
+
+
+/* =========================================================
+   VASP HELPERS
+========================================================= */
+
+function normalizeVaspEntry(
+    entry
+) {
+    if (
+        !entry ||
+        typeof entry !==
+            "object"
+    ) {
+        return null;
+    }
+
+    const addresses =
+        Array.isArray(
+            entry.addresses
+        )
+            ? entry.addresses
+            : Array.isArray(
+                  entry.wallets
+              )
+                ? entry.wallets
+                : entry.address
+                    ? [
+                          entry.address
+                      ]
+                    : [];
+
+    return {
+        ...entry,
+
+        name:
+            entry.name ||
+            entry.label ||
+            entry.exchange ||
+            entry.company ||
+            "Unknown VASP",
+
+        type:
+            entry.type ||
+            entry.category ||
+            "VASP",
+
+        addresses:
+            addresses
+                .map(
+                    normalizeWallet
+                )
+                .filter(
+                    Boolean
+                )
+    };
+}
+
+
+function findVasp(
+    address
+) {
+    const target =
+        normalizeWallet(
+            address
+        );
+
+    if (!target) {
+        return null;
+    }
+
+    for (
+        const rawEntry of
+        vaspDatabase
+    ) {
+
+        const entry =
+            normalizeVaspEntry(
+                rawEntry
+            );
+
+        if (!entry) {
             continue;
         }
 
-        const key =
-            normalizeWallet(
-                address
-            );
-
         if (
-            !map.has(key)
-        ) {
-
-            map.set(
-                key,
-                address
-            );
-        }
-    }
-
-    return Array.from(
-        map.values()
-    );
-}
-
-
-/* =========================================================
-   VASP DATABASE HELPERS
-========================================================= */
-
-function getVaspDatabase() {
-
-    if (
-        Array.isArray(
-            vaspDatabase
-        )
-    ) {
-        return vaspDatabase;
-    }
-
-    if (
-        vaspDatabase &&
-        Array.isArray(
-            vaspDatabase.data
-        )
-    ) {
-        return vaspDatabase.data;
-    }
-
-    if (
-        vaspDatabase &&
-        Array.isArray(
-            vaspDatabase.vasps
-        )
-    ) {
-        return vaspDatabase.vasps;
-    }
-
-    return [];
-}
-
-
-function getComplaintDatabase() {
-
-    if (
-        Array.isArray(
-            complaintDatabase
-        )
-    ) {
-        return complaintDatabase;
-    }
-
-    if (
-        complaintDatabase &&
-        Array.isArray(
-            complaintDatabase.data
-        )
-    ) {
-        return complaintDatabase.data;
-    }
-
-    if (
-        complaintDatabase &&
-        Array.isArray(
-            complaintDatabase.complaints
-        )
-    ) {
-        return complaintDatabase.complaints;
-    }
-
-    return [];
-}
-
-
-/* =========================================================
-   GENERIC ADDRESS SEARCH
-========================================================= */
-
-function objectContainsAddress(
-    object,
-    address
-) {
-
-    if (
-        !object ||
-        !address
-    ) {
-        return false;
-    }
-
-    const target =
-        normalizeWallet(
-            address
-        );
-
-    const values =
-        Object.values(
-            object
-        );
-
-    for (
-        const value of values
-    ) {
-
-        if (
-            typeof value ===
-            "string"
-        ) {
-
-            if (
-                normalizeWallet(
-                    value
-                ) ===
+            entry.addresses.includes(
                 target
-            ) {
-                return true;
-            }
-
-            if (
-                value
-                    .toLowerCase()
-                    .includes(
-                        target
-                    )
-            ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-
-/* =========================================================
-   VASP LOOKUP
-========================================================= */
-
-function findVaspForAddress(
-    address
-) {
-
-    const database =
-        getVaspDatabase();
-
-    const matches =
-        [];
-
-    for (
-        const entry of database
-    ) {
-
-        if (
-            objectContainsAddress(
-                entry,
-                address
             )
         ) {
-
-            matches.push(
-                entry
-            );
+            return {
+                ...entry,
+                matchedAddress:
+                    address,
+                matchType:
+                    "local_database"
+            };
         }
     }
 
-    return matches;
+    return null;
 }
 
 
-/* =========================================================
-   VASP ATTRIBUTION
-========================================================= */
-
-function buildVaspAttribution(
-    transactions
-) {
-
-    const counterparties =
-        getUniqueCounterparties(
-            transactions
-        );
-
-    const results =
-        [];
-
-    const seen =
-        new Set();
-
-    for (
-        const address of counterparties
-    ) {
-
-        const matches =
-            findVaspForAddress(
-                address
-            );
-
-        for (
-            const match of matches
-        ) {
-
-            const key =
-                JSON.stringify(
-                    [
-                        address,
-                        match
-                    ]
-                );
-
-            if (
-                seen.has(key)
-            ) {
-                continue;
-            }
-
-            seen.add(key);
-
-            results.push({
-
-                address,
-
-                vasp:
-                    match.name ||
-                    match.vasp_name ||
-                    match.exchange ||
-                    match.platform ||
-                    "Unknown VASP",
-
-                category:
-                    match.category ||
-                    match.type ||
-                    "VASP",
-
-                country:
-                    match.country ||
-                    match.jurisdiction ||
-                    "Unknown",
-
-                status:
-                    match.status ||
-                    "Unknown",
-
-                source:
-                    match.source ||
-                    "Local VASP Database",
-
-                details:
-                    match
-            });
-        }
-    }
-
-    return results;
-}
-
-
-/* =========================================================
-   COMPLAINT MATCHING
-========================================================= */
-
-function complaintAddressMatches(
-    complaint,
+function getVaspAttribution(
     address
 ) {
+    const vasp =
+        findVasp(
+            address
+        );
 
-    if (
-        !complaint ||
-        !address
-    ) {
-        return false;
+    if (vasp) {
+        return {
+            identified:
+                true,
+
+            name:
+                vasp.name,
+
+            type:
+                vasp.type,
+
+            confidence:
+                1,
+
+            source:
+                "local_database",
+
+            matchedAddress:
+                vasp.matchedAddress
+        };
     }
 
+    return {
+        identified:
+            false,
+
+        name:
+            null,
+
+        type:
+            null,
+
+        confidence:
+            0,
+
+        source:
+            null,
+
+        matchedAddress:
+            null
+    };
+}
+
+
+/* =========================================================
+   COMPLAINT HELPERS
+========================================================= */
+
+function getComplaintsForWallet(
+    address
+) {
     const target =
         normalizeWallet(
             address
         );
 
-    const possibleFields = [
-
-        "wallet",
-
-        "wallet_address",
-
-        "address",
-
-        "crypto_address",
-
-        "from",
-
-        "to",
-
-        "sender",
-
-        "receiver",
-
-        "suspect_wallet",
-
-        "suspect_address",
-
-        "transaction_address",
-
-        "blockchain_address"
-    ];
-
-    for (
-        const field of possibleFields
-    ) {
-
-        if (
-            complaint[field]
-        ) {
-
-            const value =
-                normalizeWallet(
-                    complaint[field]
-                );
-
-            if (
-                value ===
-                target
-            ) {
-                return true;
-            }
-        }
+    if (!target) {
+        return [];
     }
 
-    return objectContainsAddress(
-        complaint,
-        address
-    );
-}
+    return complaintDatabase.filter(
+        complaint => {
 
+            const walletFields = [
+                complaint.wallet,
+                complaint.address,
+                complaint.from,
+                complaint.to,
+                complaint.suspect_wallet
+            ];
 
-/* =========================================================
-   COMPLAINT CROSS REFERENCE
-========================================================= */
-
-function findComplaintsForAddresses(
-    addresses
-) {
-
-    const database =
-        getComplaintDatabase();
-
-    const results =
-        [];
-
-    const seen =
-        new Set();
-
-    for (
-        const address of addresses
-    ) {
-
-        for (
-            const complaint of database
-        ) {
-
-            if (
-                !complaintAddressMatches(
-                    complaint,
-                    address
-                )
-            ) {
-                continue;
-            }
-
-            const id =
-                complaint.id ||
-                complaint.complaint_id ||
-                complaint.case_id ||
-                createHash(
-                    JSON.stringify(
-                        complaint
+            return walletFields.some(
+                value =>
+                    sameWallet(
+                        value,
+                        target
                     )
-                );
-
-            const key =
-                `${address}:${id}`;
-
-            if (
-                seen.has(key)
-            ) {
-                continue;
-            }
-
-            seen.add(key);
-
-            results.push({
-
-                address,
-
-                complaint_id:
-                    complaint.complaint_id ||
-                    complaint.case_id ||
-                    complaint.id ||
-                    null,
-
-                status:
-                    complaint.status ||
-                    "Reported",
-
-                category:
-                    complaint.category ||
-                    complaint.type ||
-                    "Crypto Fraud",
-
-                date:
-                    complaint.date ||
-                    complaint.created_at ||
-                    complaint.timestamp ||
-                    null,
-
-                description:
-                    complaint.description ||
-                    complaint.details ||
-                    "",
-
-                source:
-                    complaint.source ||
-                    "Complaint Database",
-
-                details:
-                    complaint
-            });
-        }
-    }
-
-    return results;
-}
-
-
-/* =========================================================
-   TRANSACTION ADDRESS COLLECTION
-========================================================= */
-
-function collectTransactionAddresses(
-    transactions,
-    wallet
-) {
-
-    const addresses =
-        new Set();
-
-    if (wallet) {
-
-        addresses.add(
-            wallet
-        );
-    }
-
-    for (
-        const tx of transactions
-    ) {
-
-        if (tx.from) {
-            addresses.add(
-                tx.from
             );
         }
-
-        if (tx.to) {
-            addresses.add(
-                tx.to
-            );
-        }
-    }
-
-    return Array.from(
-        addresses
     );
 }
 
 
 /* =========================================================
-   RISK SCORING
+   RISK SCORE
 ========================================================= */
 
 function calculateRiskScore(
-    transactions,
-    complaints,
-    vaspMatches
+    wallet,
+    transactions
 ) {
+    let score = 10;
 
-    let score = 0;
-
-    const reasons =
-        [];
-
-    const total =
-        transactions.length;
-
-    const complaintCount =
-        complaints.length;
-
-    const vaspCount =
-        vaspMatches.length;
+    const complaints =
+        getComplaintsForWallet(
+            wallet
+        );
 
     if (
-        complaintCount > 0
+        complaints.length > 0
     ) {
-
-        score += 45;
-
-        reasons.push(
-            `${complaintCount} complaint match(es) found`
-        );
-    }
-
-    if (
-        vaspCount > 0
-    ) {
-
-        score += 10;
-
-        reasons.push(
-            `${vaspCount} VASP attribution match(es) found`
-        );
+        score +=
+            Math.min(
+                complaints.length *
+                    20,
+                40
+            );
     }
 
     let highValueCount = 0;
 
-    let rapidCount = 0;
+    let outgoingCount = 0;
 
-    let uniqueCounterparties =
+    let incomingCount = 0;
+
+    const counterparties =
         new Set();
 
-    let sentAmount = 0;
-
-    let receivedAmount = 0;
-
     for (
-        const tx of transactions
+        const tx of
+        transactions
     ) {
-
-        const amount =
-            Number(
-                tx.amount ||
-                tx.value ||
-                0
-            );
 
         if (
-            tx.direction ===
-            "Sent"
-        ) {
-
-            sentAmount +=
-                amount;
-
-        } else if (
-            tx.direction ===
-            "Received"
-        ) {
-
-            receivedAmount +=
-                amount;
-        }
-
-        if (
-            amount >=
-            10000
-        ) {
-
-            highValueCount++;
-        }
-
-        const cp =
-            getCounterparty(
-                tx
-            );
-
-        if (cp) {
-
-            uniqueCounterparties.add(
-                normalizeWallet(
-                    cp
-                )
-            );
-        }
-    }
-
-    if (
-        highValueCount > 0
-    ) {
-
-        score +=
-            Math.min(
-                20,
-                highValueCount * 5
-            );
-
-        reasons.push(
-            `${highValueCount} high-value transaction(s)`
-        );
-    }
-
-    if (
-        total >= 20
-    ) {
-
-        score += 5;
-
-        reasons.push(
-            "High transaction activity"
-        );
-    }
-
-    if (
-        uniqueCounterparties.size >=
-        10
-    ) {
-
-        score += 5;
-
-        reasons.push(
-            "Large counterparty network"
-        );
-    }
-
-    if (
-        sentAmount >
-            0 &&
-        receivedAmount >
-            0
-    ) {
-
-        const ratio =
-            sentAmount /
-            Math.max(
-                receivedAmount,
-                1
-            );
-
-        if (
-            ratio >= 2 ||
-            ratio <= 0.5
-        ) {
-
-            score += 5;
-
-            reasons.push(
-                "Significant directional fund-flow imbalance"
-            );
-        }
-    }
-
-    score =
-        Math.min(
-            100,
-            Math.max(
-                0,
-                score
+            sameWallet(
+                tx.from,
+                wallet
             )
-        );
-
-    let level =
-        "LOW";
-
-    if (
-        score >= 70
-    ) {
-
-        level =
-            "CRITICAL";
-
-    } else if (
-        score >= 50
-    ) {
-
-        level =
-            "HIGH";
-
-    } else if (
-        score >= 30
-    ) {
-
-        level =
-            "MEDIUM";
-    }
-
-    return {
-
-        score,
-
-        level,
-
-        reasons,
-
-        metrics: {
-
-            transactions:
-                total,
-
-            complaints:
-                complaintCount,
-
-            vaspMatches:
-                vaspCount,
-
-            highValueTransactions:
-                highValueCount,
-
-            counterparties:
-                uniqueCounterparties.size,
-
-            sentAmount:
-                formatAmount(
-                    sentAmount
-                ),
-
-            receivedAmount:
-                formatAmount(
-                    receivedAmount
-                )
-        }
-    };
-}
-
-
-/* =========================================================
-   FRAUD TYPOLOGY
-========================================================= */
-
-function detectFraudTypology(
-    transactions,
-    complaints,
-    vaspMatches
-) {
-
-    const typologies =
-        [];
-
-    const counterpartySet =
-        new Set();
-
-    let highValue = 0;
-
-    let sent = 0;
-
-    let received = 0;
-
-    for (
-        const tx of transactions
-    ) {
-
-        const amount =
-            Number(
-                tx.amount ||
-                tx.value ||
-                0
-            );
-
-        if (
-            amount >=
-            10000
         ) {
-            highValue++;
-        }
-
-        if (
-            tx.direction ===
-            "Sent"
-        ) {
-            sent += amount;
-        }
-
-        if (
-            tx.direction ===
-            "Received"
-        ) {
-            received += amount;
-        }
-
-        const cp =
-            getCounterparty(
-                tx
-            );
-
-        if (cp) {
-            counterpartySet.add(
-                normalizeWallet(
-                    cp
-                )
-            );
-        }
-    }
-
-    if (
-        complaints.length > 0
-    ) {
-
-        typologies.push({
-            type:
-                "Reported Fraud Exposure",
-
-            confidence:
-                "HIGH",
-
-            reason:
-                "Wallet or related address matched complaint records."
-        });
-    }
-
-    if (
-        highValue >= 3
-    ) {
-
-        typologies.push({
-            type:
-                "High-Value Transfer Pattern",
-
-            confidence:
-                "MEDIUM",
-
-            reason:
-                "Multiple high-value transfers were observed."
-        });
-    }
-
-    if (
-        counterpartySet.size >=
-        10
-    ) {
-
-        typologies.push({
-            type:
-                "Layering / Multi-Counterparty Flow",
-
-            confidence:
-                "MEDIUM",
-
-            reason:
-                "Wallet interacted with a comparatively large number of counterparties."
-        });
-    }
-
-    if (
-        sent > 0 &&
-        received > 0 &&
-        sent > received * 2
-    ) {
-
-        typologies.push({
-            type:
-                "Rapid Outbound Fund Movement",
-
-            confidence:
-                "MEDIUM",
-
-            reason:
-                "Outbound value substantially exceeded inbound value."
-        });
-    }
-
-    if (
-        vaspMatches.length > 0
-    ) {
-
-        typologies.push({
-            type:
-                "VASP Exposure",
-
-            confidence:
-                "LOW",
-
-            reason:
-                "One or more counterparties were attributed to a VASP."
-        });
-    }
-
-    if (
-        typologies.length === 0
-    ) {
-
-        typologies.push({
-            type:
-                "No Strong Typology Detected",
-
-            confidence:
-                "LOW",
-
-            reason:
-                "Available transaction evidence does not strongly match the configured typologies."
-        });
-    }
-
-    return typologies;
-}
-
-
-/* =========================================================
-   INVESTIGATION INSIGHTS
-========================================================= */
-
-function generateInsights(
-    transactions,
-    risk,
-    complaints,
-    vaspMatches
-) {
-
-    const insights =
-        [];
-
-    if (
-        risk.level ===
-        "CRITICAL"
-    ) {
-
-        insights.push(
-            "The wallet exhibits a critical-risk pattern based on the available evidence."
-        );
-
-    } else if (
-        risk.level ===
-        "HIGH"
-    ) {
-
-        insights.push(
-            "The wallet exhibits elevated risk indicators that warrant further investigation."
-        );
-
-    } else if (
-        risk.level ===
-        "MEDIUM"
-    ) {
-
-        insights.push(
-            "The wallet contains moderate risk indicators."
-        );
-
-    } else {
-
-        insights.push(
-            "No strong high-risk indicators were identified from the available dataset."
-        );
-    }
-
-    if (
-        complaints.length > 0
-    ) {
-
-        insights.push(
-            "Complaint database correlation increases the evidentiary priority of this wallet."
-        );
-    }
-
-    if (
-        vaspMatches.length > 0
-    ) {
-
-        insights.push(
-            "VASP attribution may provide an additional investigative lead."
-        );
-    }
-
-    if (
-        transactions.length === 0
-    ) {
-
-        insights.push(
-            "No matching transactions were returned for the selected network and token."
-        );
-    }
-
-    return insights;
-}
-
-
-/* =========================================================
-   RECOMMENDATIONS
-========================================================= */
-
-function generateRecommendations(
-    risk,
-    complaints,
-    vaspMatches,
-    transactions
-) {
-
-    const recommendations =
-        [];
-
-    if (
-        risk.score >= 70
-    ) {
-
-        recommendations.push(
-            "Prioritize the wallet for manual investigative review."
-        );
-
-        recommendations.push(
-            "Preserve relevant transaction hashes and blockchain evidence."
-        );
-    }
-
-    if (
-        complaints.length > 0
-    ) {
-
-        recommendations.push(
-            "Cross-reference matched complaint records with the underlying transaction evidence."
-        );
-    }
-
-    if (
-        vaspMatches.length > 0
-    ) {
-
-        recommendations.push(
-            "Review attributed VASP information and applicable legal/request channels."
-        );
-    }
-
-    if (
-        transactions.length > 0
-    ) {
-
-        recommendations.push(
-            "Trace significant counterparties to identify upstream and downstream fund movement."
-        );
-    }
-
-    if (
-        recommendations.length ===
-        0
-    ) {
-
-        recommendations.push(
-            "Collect additional transaction history before making a final attribution decision."
-        );
-    }
-
-    return recommendations;
-}
-/* =========================================================
-   FUND FLOW GRAPH
-========================================================= */
-
-function buildFundFlowGraph(
-    transactions,
-    wallet
-) {
-
-    const nodes =
-        new Map();
-
-    const edges =
-        [];
-
-    function addNode(
-        address,
-        role = "counterparty"
-    ) {
-
-        if (!address) {
-            return;
-        }
-
-        const key =
-            normalizeWallet(
-                address
-            );
-
-        if (
-            nodes.has(key)
-        ) {
-            return;
-        }
-
-        nodes.set(
-            key,
-            {
-                id: address,
-
-                label:
-                    shortenAddress(
-                        address
-                    ),
-
-                address,
-
-                role
+            outgoingCount++;
+
+            if (
+                toNumber(
+                    tx.amount
+                ) >= 1000
+            ) {
+                highValueCount++;
             }
-        );
+
+            if (tx.to) {
+                counterparties.add(
+                    normalizeWallet(
+                        tx.to
+                    )
+                );
+            }
+
+        } else if (
+            sameWallet(
+                tx.to,
+                wallet
+            )
+        ) {
+            incomingCount++;
+
+            if (
+                toNumber(
+                    tx.amount
+                ) >= 1000
+            ) {
+                highValueCount++;
+            }
+
+            if (tx.from) {
+                counterparties.add(
+                    normalizeWallet(
+                        tx.from
+                    )
+                );
+            }
+        }
     }
 
-    addNode(
-        wallet,
-        "investigated_wallet"
-    );
+    score +=
+        Math.min(
+            highValueCount *
+                5,
+            20
+        );
 
-    for (
-        const tx of transactions
+    if (
+        outgoingCount > 20
     ) {
+        score += 10;
+    }
 
-        if (
-            !tx.from ||
-            !tx.to
-        ) {
-            continue;
-        }
+    if (
+        incomingCount > 20
+    ) {
+        score += 5;
+    }
 
-        addNode(
-            tx.from,
-            sameWallet(
-                tx.from,
-                wallet
-            )
-                ? "investigated_wallet"
-                : "sender"
+    if (
+        counterparties.size > 20
+    ) {
+        score += 5;
+    }
+
+    const vasp =
+        getVaspAttribution(
+            wallet
         );
 
-        addNode(
-            tx.to,
-            sameWallet(
-                tx.to,
-                wallet
-            )
-                ? "investigated_wallet"
-                : "receiver"
+    if (
+        vasp.identified
+    ) {
+        score += 5;
+    }
+
+    return Math.min(
+        Math.max(
+            Math.round(score),
+            0
+        ),
+        100
+    );
+}
+
+
+/* =========================================================
+   TYPOLOGIES
+========================================================= */
+
+function detectTypologies(
+    wallet,
+    transactions
+) {
+    const result = [];
+
+    const outgoing =
+        transactions.filter(
+            tx =>
+                sameWallet(
+                    tx.from,
+                    wallet
+                )
         );
 
-        const amount =
-            Number(
-                tx.amount ||
-                tx.value ||
-                0
-            );
+    const incoming =
+        transactions.filter(
+            tx =>
+                sameWallet(
+                    tx.to,
+                    wallet
+                )
+        );
 
-        edges.push({
-
-            id:
-                createHash(
-                    [
-                        tx.hash,
-                        tx.from,
-                        tx.to,
-                        amount
-                    ].join(":")
-                ),
-
-            source:
-                tx.from,
-
-            target:
-                tx.to,
-
-            amount:
-                amount,
-
-            amountFormatted:
-                formatAmount(
-                    amount
-                ),
-
-            token:
-                tx.token ||
-                "USDT",
-
-            direction:
-                tx.direction,
-
-            hash:
-                tx.hash,
-
-            timestamp:
-                tx.timestamp
+    if (
+        outgoing.length >= 5
+    ) {
+        result.push({
+            type:
+                "multiple_outgoing",
+            description:
+                "Wallet has multiple outgoing transfers."
         });
     }
 
-    return {
-
-        nodes:
-            Array.from(
-                nodes.values()
-            ),
-
-        edges,
-
-        nodeCount:
-            nodes.size,
-
-        edgeCount:
-            edges.length
-    };
-}
-
-
-/* =========================================================
-   DIRECT FUND FLOW
-========================================================= */
-
-function getDirectFundFlow(
-    transactions,
-    wallet
-) {
-
-    const incoming = [];
-
-    const outgoing = [];
-
-    for (
-        const tx of transactions
+    if (
+        incoming.length >= 5
     ) {
-
-        const item = {
-
-            hash:
-                tx.hash,
-
-            from:
-                tx.from,
-
-            to:
-                tx.to,
-
-            amount:
-                Number(
-                    tx.amount ||
-                    tx.value ||
-                    0
-                ),
-
-            amountFormatted:
-                formatAmount(
-                    Number(
-                        tx.amount ||
-                        tx.value ||
-                        0
-                    )
-                ),
-
-            token:
-                tx.token ||
-                "USDT",
-
-            timestamp:
-                tx.timestamp,
-
-            date:
-                tx.date,
-
-            explorer_url:
-                tx.explorer_url
-        };
-
-        if (
-            sameWallet(
-                tx.to,
-                wallet
-            )
-        ) {
-
-            incoming.push(
-                item
-            );
-
-        } else if (
-            sameWallet(
-                tx.from,
-                wallet
-            )
-        ) {
-
-            outgoing.push(
-                item
-            );
-        }
+        result.push({
+            type:
+                "multiple_incoming",
+            description:
+                "Wallet has multiple incoming transfers."
+        });
     }
 
-    return {
-
-        incoming,
-
-        outgoing,
-
-        incomingCount:
-            incoming.length,
-
-        outgoingCount:
-            outgoing.length
-    };
-}
-
-
-/* =========================================================
-   TOP COUNTERPARTIES
-========================================================= */
-
-function getTopCounterparties(
-    transactions,
-    wallet,
-    limit = 10
-) {
-
-    const map =
+    const outgoingByAddress =
         new Map();
 
     for (
-        const tx of transactions
+        const tx of outgoing
     ) {
-
-        const address =
-            getCounterparty(
-                tx
+        const key =
+            normalizeWallet(
+                tx.to
             );
 
-        if (!address) {
+        if (!key) {
             continue;
         }
 
-        const key =
-            normalizeWallet(
-                address
-            );
+        outgoingByAddress.set(
+            key,
+            (
+                outgoingByAddress.get(
+                    key
+                ) || 0
+            ) + 1
+        );
+    }
 
-        const amount =
-            Number(
-                tx.amount ||
-                tx.value ||
-                0
-            );
-
+    for (
+        const [
+            address,
+            count
+        ] of outgoingByAddress
+    ) {
         if (
-            !map.has(key)
+            count >= 3
         ) {
-
-            map.set(
-                key,
-                {
+            result.push({
+                type:
+                    "repeated_counterparty",
+                address:
                     address,
-
-                    transactionCount:
-                        0,
-
-                    totalAmount:
-                        0,
-
-                    sentAmount:
-                        0,
-
-                    receivedAmount:
-                        0
-                }
-            );
-        }
-
-        const item =
-            map.get(key);
-
-        item.transactionCount++;
-
-        item.totalAmount +=
-            amount;
-
-        if (
-            tx.direction ===
-            "Sent"
-        ) {
-
-            item.sentAmount +=
-                amount;
-
-        } else if (
-            tx.direction ===
-            "Received"
-        ) {
-
-            item.receivedAmount +=
-                amount;
+                count:
+                    count
+            });
         }
     }
 
-    return Array.from(
-        map.values()
-    )
-        .sort(
+    const splitMap =
+        new Map();
+
+    for (
+        const tx of outgoing
+    ) {
+
+        const amount =
+            toNumber(
+                tx.amount
+            );
+
+        if (
+            amount <= 0
+        ) {
+            continue;
+        }
+
+        const rounded =
+            roundNumber(
+                amount,
+                2
+            );
+
+        splitMap.set(
+            rounded,
             (
-                a,
-                b
-            ) =>
-                b.totalAmount -
-                a.totalAmount
-        )
-        .slice(
-            0,
-            limit
-        )
-        .map(
-            item => ({
-
-                address:
-                    item.address,
-
-                label:
-                    shortenAddress(
-                        item.address
-                    ),
-
-                transactionCount:
-                    item.transactionCount,
-
-                totalAmount:
-                    formatAmount(
-                        item.totalAmount
-                    ),
-
-                sentAmount:
-                    formatAmount(
-                        item.sentAmount
-                    ),
-
-                receivedAmount:
-                    formatAmount(
-                        item.receivedAmount
-                    )
-            })
+                splitMap.get(
+                    rounded
+                ) || 0
+            ) + 1
         );
-}
+    }
 
-
-/* =========================================================
-   TRANSACTION TIMELINE
-========================================================= */
-
-function buildTransactionTimeline(
-    transactions
-) {
-
-    return transactions
-        .map(
-            tx => ({
-
-                hash:
-                    tx.hash,
-
-                timestamp:
-                    tx.timestamp,
-
-                date:
-                    tx.date,
-
-                direction:
-                    tx.direction,
-
+    for (
+        const [
+            amount,
+            count
+        ] of splitMap
+    ) {
+        if (
+            count >= 3
+        ) {
+            result.push({
+                type:
+                    "fund_splitting",
                 amount:
-                    Number(
-                        tx.amount ||
-                        tx.value ||
-                        0
-                    ),
+                    amount,
+                count:
+                    count
+            });
+        }
+    }
 
-                amountFormatted:
-                    formatAmount(
-                        Number(
-                            tx.amount ||
-                            tx.value ||
-                            0
-                        )
-                    ),
-
-                from:
-                    tx.from,
-
-                to:
-                    tx.to,
-
-                token:
-                    tx.token,
-
-                blockchain:
-                    tx.blockchain,
-
-                explorer_url:
-                    tx.explorer_url
-            })
-        )
-        .sort(
-            (
-                a,
-                b
-            ) =>
-                Number(
-                    b.timestamp || 0
-                ) -
-                Number(
-                    a.timestamp || 0
-                )
-        );
+    return result;
 }
 
 
@@ -4328,1072 +1872,149 @@ function buildTransactionTimeline(
    TRANSACTION STATISTICS
 ========================================================= */
 
-function calculateTransactionStatistics(
+function calculateStatistics(
+    wallet,
     transactions
 ) {
+    let incomingAmount = 0;
 
-    let totalVolume = 0;
+    let outgoingAmount = 0;
 
-    let maxTransaction = 0;
+    let incomingCount = 0;
 
-    let minTransaction =
-        transactions.length
-            ? Infinity
-            : 0;
+    let outgoingCount = 0;
 
-    let sentVolume = 0;
+    const counterparties =
+        new Set();
 
-    let receivedVolume = 0;
-
-    let sentCount = 0;
-
-    let receivedCount = 0;
+    let highestTransaction = null;
 
     for (
-        const tx of transactions
+        const tx of
+        transactions
     ) {
 
         const amount =
-            Number(
-                tx.amount ||
-                tx.value ||
-                0
-            );
-
-        totalVolume +=
-            amount;
-
-        maxTransaction =
-            Math.max(
-                maxTransaction,
-                amount
-            );
-
-        minTransaction =
-            Math.min(
-                minTransaction,
-                amount
+            toNumber(
+                tx.amount
             );
 
         if (
-            tx.direction ===
-            "Sent"
+            sameWallet(
+                tx.to,
+                wallet
+            )
         ) {
 
-            sentCount++;
+            incomingCount++;
 
-            sentVolume +=
+            incomingAmount +=
                 amount;
+
+            if (tx.from) {
+                counterparties.add(
+                    normalizeWallet(
+                        tx.from
+                    )
+                );
+            }
 
         } else if (
-            tx.direction ===
-            "Received"
+            sameWallet(
+                tx.from,
+                wallet
+            )
         ) {
 
-            receivedCount++;
+            outgoingCount++;
 
-            receivedVolume +=
+            outgoingAmount +=
                 amount;
+
+            if (tx.to) {
+                counterparties.add(
+                    normalizeWallet(
+                        tx.to
+                    )
+                );
+            }
+        }
+
+        if (
+            !highestTransaction ||
+            amount >
+                toNumber(
+                    highestTransaction.amount
+                )
+        ) {
+            highestTransaction =
+                tx;
         }
     }
 
     return {
 
-        totalTransactions:
-            transactions.length,
+        incomingCount,
 
-        sentCount,
+        outgoingCount,
 
-        receivedCount,
-
-        totalVolume:
-            formatAmount(
-                totalVolume
+        incomingAmount:
+            roundNumber(
+                incomingAmount,
+                6
             ),
 
-        sentVolume:
-            formatAmount(
-                sentVolume
-            ),
-
-        receivedVolume:
-            formatAmount(
-                receivedVolume
-            ),
-
-        averageTransaction:
-            formatAmount(
-                transactions.length
-                    ? totalVolume /
-                          transactions.length
-                    : 0
-            ),
-
-        maxTransaction:
-            formatAmount(
-                maxTransaction
-            ),
-
-        minTransaction:
-            formatAmount(
-                minTransaction
+        outgoingAmount:
+            roundNumber(
+                outgoingAmount,
+                6
             ),
 
         netFlow:
-            formatAmount(
-                receivedVolume -
-                sentVolume
-            )
+            roundNumber(
+                incomingAmount -
+                    outgoingAmount,
+                6
+            ),
+
+        totalVolume:
+            roundNumber(
+                incomingAmount +
+                    outgoingAmount,
+                6
+            ),
+
+        transactionCount:
+            transactions.length,
+
+        uniqueCounterparties:
+            counterparties.size,
+
+        highestTransaction
     };
 }
 
 
 /* =========================================================
-   NETWORK METADATA
-========================================================= */
-
-function getNetworkMetadata(
-    blockchain
-) {
-
-    const network =
-        normalizeBlockchain(
-            blockchain
-        );
-
-    if (
-        network ===
-        "ethereum"
-    ) {
-
-        return {
-
-            blockchain:
-                "ethereum",
-
-            name:
-                "Ethereum",
-
-            standard:
-                "ERC-20",
-
-            chainId:
-                1,
-
-            token:
-                "USDT",
-
-            contract:
-                ETH_USDT_CONTRACT,
-
-            explorer:
-                "Etherscan",
-
-            explorerBase:
-                "https://etherscan.io"
-        };
-    }
-
-    if (
-        network ===
-        "bnb"
-    ) {
-
-        return {
-
-            blockchain:
-                "bnb",
-
-            name:
-                "BNB Chain",
-
-            standard:
-                "BEP-20",
-
-            chainId:
-                56,
-
-            token:
-                "USDT",
-
-            contract:
-                BNB_USDT_CONTRACT,
-
-            explorer:
-                "BscScan",
-
-            explorerBase:
-                "https://bscscan.com"
-        };
-    }
-
-    return {
-
-        blockchain:
-            "tron",
-
-        name:
-            "TRON",
-
-        standard:
-            "TRC-20",
-
-        chainId:
-            null,
-
-        token:
-            "USDT",
-
-        contract:
-            USDT_CONTRACT,
-
-        explorer:
-            "TRONSCAN",
-
-        explorerBase:
-            "https://tronscan.org"
-    };
-}
-
-
-/* =========================================================
-   API HEALTH
-========================================================= */
-
-app.get(
-    "/api/health",
-    (
-        req,
-        res
-    ) => {
-
-        res.json({
-
-            status:
-                "online",
-
-            service:
-                "ChainTrace AI",
-
-            version:
-                "multichain",
-
-            timestamp:
-                new Date().toISOString(),
-
-            blockchainSupport: {
-
-                tron: true,
-
-                ethereum:
-                    Boolean(
-                        ETHERSCAN_API_KEY
-                    ),
-
-                bnb:
-                    Boolean(
-                        ETHERSCAN_API_KEY
-                    )
-            },
-
-            data: {
-
-                complaintDatabase:
-                    getComplaintDatabase()
-                        .length,
-
-                vaspDatabase:
-                    getVaspDatabase()
-                        .length,
-
-                realtimeWatchers:
-                    realtimeWatchers.size,
-
-                realtimeAlerts:
-                    realtimeAlerts.length
-            },
-
-            integrations: {
-
-                tron:
-                    Boolean(
-                        TRON_API_KEY
-                    ),
-
-                etherscan:
-                    Boolean(
-                        ETHERSCAN_API_KEY
-                    ),
-
-                apiIntegration:
-                    Boolean(
-                        API_INTEGRATION_KEY &&
-                        API_INTEGRATION_URL
-                    ),
-
-                ncrp:
-                    Boolean(
-                        NCRP_API_KEY &&
-                        NCRP_API_URL
-                    ),
-
-                sahyog:
-                    Boolean(
-                        SAHYOG_API_KEY &&
-                        SAHYOG_API_URL
-                    )
-            }
-        });
-    }
-);
-
-
-/* =========================================================
-   NETWORK INFO API
-========================================================= */
-
-app.get(
-    "/api/networks",
-    (
-        req,
-        res
-    ) => {
-
-        res.json({
-
-            success:
-                true,
-
-            networks: [
-
-                {
-
-                    id:
-                        "tron",
-
-                    name:
-                        "TRON",
-
-                    standard:
-                        "TRC-20",
-
-                    token:
-                        "USDT",
-
-                    enabled:
-                        Boolean(
-                            TRON_API_KEY
-                        ),
-
-                    contract:
-                        USDT_CONTRACT,
-
-                    explorer:
-                        "TRONSCAN"
-                },
-
-                {
-
-                    id:
-                        "ethereum",
-
-                    name:
-                        "Ethereum",
-
-                    standard:
-                        "ERC-20",
-
-                    token:
-                        "USDT",
-
-                    enabled:
-                        Boolean(
-                            ETHERSCAN_API_KEY
-                        ),
-
-                    contract:
-                        ETH_USDT_CONTRACT,
-
-                    chainId:
-                        1,
-
-                    explorer:
-                        "Etherscan"
-                },
-
-                {
-
-                    id:
-                        "bnb",
-
-                    name:
-                        "BNB Chain",
-
-                    standard:
-                        "BEP-20",
-
-                    token:
-                        "USDT",
-
-                    enabled:
-                        Boolean(
-                            ETHERSCAN_API_KEY
-                        ),
-
-                    contract:
-                        BNB_USDT_CONTRACT,
-
-                    chainId:
-                        56,
-
-                    explorer:
-                        "BscScan"
-                }
-            ]
-        });
-    }
-);
-
-
-/* =========================================================
-   SIMPLE WALLET VALIDATION API
-========================================================= */
-
-app.post(
-    "/api/validate-wallet",
-    (
-        req,
-        res
-    ) => {
-
-        try {
-
-            const wallet =
-                safeString(
-                    req.body?.wallet
-                );
-
-            const blockchain =
-                normalizeBlockchain(
-                    req.body?.blockchain
-                );
-
-            const valid =
-                isValidBlockchainAddress(
-                    wallet,
-                    blockchain
-                );
-
-            res.json({
-
-                success:
-                    true,
-
-                valid,
-
-                wallet,
-
-                blockchain,
-
-                blockchain_name:
-                    getBlockchainName(
-                        blockchain
-                    )
-            });
-
-        } catch (
-            error
-        ) {
-
-            res.status(
-                400
-            ).json({
-
-                success:
-                    false,
-
-                error:
-                    error.message
-            });
-        }
-    }
-);
-
-
-/* =========================================================
-   WALLET ANALYSIS
-========================================================= */
-
-app.post(
-    "/api/analyze",
-    async (
-        req,
-        res
-    ) => {
-
-        const startedAt =
-            Date.now();
-
-        try {
-
-            const wallet =
-                safeString(
-                    req.body?.wallet ||
-                    req.body?.address
-                );
-
-            const blockchain =
-                normalizeBlockchain(
-                    req.body?.blockchain
-                );
-
-            const token =
-                String(
-                    req.body?.token ||
-                    "USDT"
-                ).toUpperCase();
-
-            const depthValue =
-                safeString(
-                    req.body?.depth
-                ).toLowerCase();
-
-            const depth =
-                depthValue === "all"
-                    ? "all"
-                    : Math.min(
-                        Math.max(
-                            Number(
-                                depthValue
-                            ) || 1,
-                            1
-                        ),
-                        5
-                    );
-
-            if (!wallet) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "Wallet address is required."
-                    });
-            }
-
-            if (
-                !isValidBlockchainAddress(
-                    wallet,
-                    blockchain
-                )
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            `Invalid ${getBlockchainName(
-                                blockchain
-                            )} wallet address.`
-                    });
-            }
-
-            const network =
-                getNetworkMetadata(
-                    blockchain
-                );
-
-            const cacheKey =
-                createHash(
-                    JSON.stringify({
-                        wallet:
-                            normalizeWallet(
-                                wallet
-                            ),
-
-                        blockchain,
-
-                        token,
-
-                        depth
-                    })
-                );
-
-            const cached =
-                getAnalysisCache(
-                    cacheKey
-                );
-
-            if (cached) {
-
-                return res.json({
-
-                    ...cached,
-
-                    cached:
-                        true
-                });
-            }
-
-            const indexed =
-                await scalableBlockchainIndex(
-                    wallet,
-                    token,
-                    blockchain
-                );
-
-            const normalized =
-                indexed.transactions
-                    .map(
-                        tx =>
-                            normalizeTransaction(
-                                tx,
-                                wallet,
-                                blockchain
-                            )
-                    );
-
-            const directTransactions =
-                sortTransactions(
-                    normalized
-                );
-
-            /*
-             * Depth handling:
-             *   1   = root wallet only
-             *   2-5 = root wallet + downstream hops
-             *   all = all available trace levels (currently up to 5)
-             */
-            let trace = null;
-            let traceTransactions = [];
-
-            if (
-                depth === "all" ||
-                Number(depth) > 1
-            ) {
-                trace =
-                    await traceWallet(
-                        wallet,
-                        blockchain,
-                        token,
-                        depth
-                    );
-
-                traceTransactions =
-                    flattenTraceTransactions(
-                        trace
-                    );
-            }
-
-            const combinedMap =
-                new Map();
-
-            for (
-                const tx of [
-                    ...directTransactions,
-                    ...traceTransactions
-                ]
-            ) {
-                const key =
-                    [
-                        tx.hash,
-                        tx.from,
-                        tx.to,
-                        tx.amount
-                    ].join("|");
-
-                if (
-                    !combinedMap.has(key)
-                ) {
-                    combinedMap.set(
-                        key,
-                        tx
-                    );
-                }
-            }
-
-            const transactions =
-                sortTransactions(
-                    Array.from(
-                        combinedMap.values()
-                    )
-                );
-
-            const summary =
-                summarizeTransactions(
-                    transactions,
-                    wallet
-                );
-
-            const statistics =
-                calculateTransactionStatistics(
-                    transactions
-                );
-
-            const addresses =
-                collectTransactionAddresses(
-                    transactions,
-                    wallet
-                );
-
-            const complaints =
-                findComplaintsForAddresses(
-                    addresses
-                );
-
-            const vaspMatches =
-                buildVaspAttribution(
-                    transactions
-                );
-
-            const risk =
-                calculateRiskScore(
-                    transactions,
-                    complaints,
-                    vaspMatches
-                );
-
-            const typologies =
-                detectFraudTypology(
-                    transactions,
-                    complaints,
-                    vaspMatches
-                );
-
-            const insights =
-                generateInsights(
-                    transactions,
-                    risk,
-                    complaints,
-                    vaspMatches
-                );
-
-            const recommendations =
-                generateRecommendations(
-                    risk,
-                    complaints,
-                    vaspMatches,
-                    transactions
-                );
-
-            const fundFlow =
-                buildFundFlowGraph(
-                    transactions,
-                    wallet
-                );
-
-            const directFlow =
-                getDirectFundFlow(
-                    transactions,
-                    wallet
-                );
-
-            const topCounterparties =
-                getTopCounterparties(
-                    transactions,
-                    wallet,
-                    10
-                );
-
-            const timeline =
-                buildTransactionTimeline(
-                    transactions
-                );
-
-            const responseData = {
-
-                success:
-                    true,
-
-                wallet,
-
-                wallet_short:
-                    shortenAddress(
-                        wallet
-                    ),
-
-                blockchain,
-
-                blockchain_name:
-                    network.name,
-
-                standard:
-                    network.standard,
-
-                token,
-
-                contract:
-                    network.contract,
-
-                chain_id:
-                    network.chainId,
-
-                explorer:
-                    getAddressExplorerUrl(
-                        wallet,
-                        blockchain
-                    ),
-
-                source:
-                    indexed.source,
-
-                cached:
-                    false,
-
-                processing_time_ms:
-                    Date.now() -
-                    startedAt,
-
-                summary,
-
-                statistics,
-
-                risk,
-
-                typologies,
-
-                insights,
-
-                recommendations,
-
-                complaints,
-
-                complaint_matches:
-                    complaints,
-
-                vaspMatches,
-
-                vasp_attribution:
-                    vaspMatches,
-
-                fundFlow,
-
-                fund_flow:
-                    fundFlow,
-
-                directFlow,
-
-                direct_fund_flow:
-                    directFlow,
-
-                topCounterparties,
-
-                top_counterparties:
-                    topCounterparties,
-
-                timeline,
-
-                // Direct wallet transactions.
-                directTransactions,
-
-                // Multi-hop trace evidence.
-                trace,
-                traceTransactions,
-
-                // Transactions visible to the selected depth.
-                transactions,
-                allTransactions:
-                    transactions
-            };
-
-            setAnalysisCache(
-                cacheKey,
-                responseData
-            );
-
-            return res.json(
-                responseData
-            );
-
-        } catch (
-            error
-        ) {
-
-            console.error(
-                "ANALYZE ERROR:",
-                error
-            );
-
-            return res
-                .status(500)
-                .json({
-
-                    success:
-                        false,
-
-                    error:
-                        error.message ||
-                        "Wallet analysis failed.",
-
-                    blockchain:
-                        normalizeBlockchain(
-                            req.body?.blockchain
-                        )
-                });
-        }
-    }
-);
-
-
-/* =========================================================
-   DIRECT TRANSACTION API
-========================================================= */
-
-app.post(
-    "/api/transactions",
-    async (
-        req,
-        res
-    ) => {
-
-        try {
-
-            const wallet =
-                safeString(
-                    req.body?.wallet ||
-                    req.body?.address
-                );
-
-            const blockchain =
-                normalizeBlockchain(
-                    req.body?.blockchain
-                );
-
-            const token =
-                String(
-                    req.body?.token ||
-                    "USDT"
-                ).toUpperCase();
-
-            if (!wallet) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "Wallet address is required."
-                    });
-            }
-
-            if (
-                !isValidBlockchainAddress(
-                    wallet,
-                    blockchain
-                )
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "Invalid wallet address."
-                    });
-            }
-
-            const result =
-                await scalableBlockchainIndex(
-                    wallet,
-                    token,
-                    blockchain
-                );
-
-            const transactions =
-                sortTransactions(
-                    result.transactions
-                        .map(
-                            tx =>
-                                normalizeTransaction(
-                                    tx,
-                                    wallet,
-                                    blockchain
-                                )
-                        )
-                );
-
-            res.json({
-
-                success:
-                    true,
-
-                wallet,
-
-                blockchain,
-
-                blockchain_name:
-                    getBlockchainName(
-                        blockchain
-                    ),
-
-                token,
-
-                contract:
-                    getUsdtContract(
-                        blockchain
-                    ),
-
-                source:
-                    result.source,
-
-                count:
-                    transactions.length,
-
-                transactions
-            });
-
-        } catch (
-            error
-        ) {
-
-            console.error(
-                "TRANSACTIONS ERROR:",
-                error
-            );
-
-            res
-                .status(500)
-                .json({
-
-                    success:
-                        false,
-
-                    error:
-                        error.message ||
-                        "Unable to fetch transactions."
-                });
-        }
-    }
-);
-/* =========================================================
-   MULTI-HOP FUND TRACE
+   TRACE WALLET
 ========================================================= */
 
 async function traceWallet(
     wallet,
-    blockchain = "tron",
+    network,
     token = "USDT",
-    depth = 2,
-    visited = new Set()
+    depth = 1,
+    visited = new Set(),
+    currentDepth = 1
 ) {
+    const address =
+        normalizeAddress(
+            wallet
+        );
 
-    const network =
-        normalizeBlockchain(
-            blockchain
+    const walletKey =
+        normalizeWallet(
+            address
         );
 
     const maxDepth =
@@ -5407,31 +2028,29 @@ async function traceWallet(
                 5
             );
 
-    const walletKey =
-        normalizeWallet(
-            wallet
-        );
-
     if (
-        visited.has(walletKey)
+        visited.has(
+            walletKey
+        )
     ) {
-
         return {
+            wallet:
+                address,
 
-            wallet,
+            depth:
+                currentDepth,
 
-            blockchain:
-                network,
+            current_depth:
+                currentDepth,
 
-            depth: 0,
+            transactions:
+                [],
 
-            transactions: [],
+            children:
+                [],
 
-            counterparties: [],
-
-            nodes: [],
-
-            edges: []
+            cycle:
+                true
         };
     }
 
@@ -5446,107 +2065,165 @@ async function traceWallet(
 
     const indexed =
         await scalableBlockchainIndex(
-            wallet,
-            token,
-            network
+            address,
+            network,
+            token
         );
 
     const transactions =
         sortTransactions(
-            indexed.transactions
-                .map(
-                    tx =>
-                        normalizeTransaction(
-                            tx,
-                            wallet,
-                            network
-                        )
-                )
+            indexed.transactions ||
+            []
         );
 
     const counterparties =
-        getUniqueCounterparties(
-            transactions
-        );
+        new Map();
 
-    const graph =
-        buildFundFlowGraph(
-            transactions,
-            wallet
-        );
+    for (
+        const tx of transactions
+    ) {
 
-    const result = {
+        let counterparty =
+            null;
 
-        wallet,
+        if (
+            sameWallet(
+                tx.from,
+                address
+            )
+        ) {
+            counterparty =
+                tx.to;
+        } else if (
+            sameWallet(
+                tx.to,
+                address
+            )
+        ) {
+            counterparty =
+                tx.from;
+        }
 
-        wallet_short:
-            shortenAddress(
-                wallet
-            ),
+        if (!counterparty) {
+            continue;
+        }
 
-        blockchain:
-            network,
+        const key =
+            normalizeWallet(
+                counterparty
+            );
 
-        blockchain_name:
-            getBlockchainName(
-                network
-            ),
+        if (
+            !key ||
+            key === walletKey
+        ) {
+            continue;
+        }
 
-        token,
+        const existing =
+            counterparties.get(
+                key
+            );
+
+        if (existing) {
+
+            existing.count++;
+
+            existing.totalAmount +=
+                toNumber(
+                    tx.amount
+                );
+
+        } else {
+
+            counterparties.set(
+                key,
+                {
+                    address:
+                        counterparty,
+
+                    count:
+                        1,
+
+                    totalAmount:
+                        toNumber(
+                            tx.amount
+                        )
+                }
+            );
+        }
+    }
+
+    const traceNode = {
+
+        wallet:
+            address,
 
         depth:
-            maxDepth,
+            currentDepth,
 
         current_depth:
-            visited.size,
+            currentDepth,
 
-        source:
-            indexed.source,
+        transactions:
+            transactions,
 
-        transactions,
-
-        transaction_count:
+        transactionCount:
             transactions.length,
 
-        counterparties,
+        counterparties:
+            Array.from(
+                counterparties.values()
+            ).sort(
+                (
+                    a,
+                    b
+                ) =>
+                    b.totalAmount -
+                    a.totalAmount
+            ),
 
-        graph,
-
-        children: []
+        children:
+            []
     };
 
     if (
-        maxDepth <=
-        visited.size
+        currentDepth >=
+        maxDepth
     ) {
-
-        return result;
+        return traceNode;
     }
 
-    /*
-     * Limit branching so that a large wallet
-     * cannot create an uncontrolled recursive
-     * request tree.
-     */
-
-    const nextAddresses =
-        counterparties.slice(
+    const nextNodes =
+        Array.from(
+            counterparties.values()
+        )
+        .sort(
+            (
+                a,
+                b
+            ) =>
+                b.totalAmount -
+                a.totalAmount
+        )
+        .slice(
             0,
             10
         );
 
     for (
-        const nextAddress of nextAddresses
+        const counterparty of
+        nextNodes
     ) {
 
-        const nextKey =
+        const childKey =
             normalizeWallet(
-                nextAddress
+                counterparty.address
             );
 
         if (
             nextVisited.has(
-                nextKey
+                childKey
             )
         ) {
             continue;
@@ -5556,14 +2233,15 @@ async function traceWallet(
 
             const child =
                 await traceWallet(
-                    nextAddress,
+                    counterparty.address,
                     network,
                     token,
                     maxDepth,
-                    nextVisited
+                    nextVisited,
+                    currentDepth + 1
                 );
 
-            result.children.push(
+            traceNode.children.push(
                 child
             );
 
@@ -5571,21 +2249,14 @@ async function traceWallet(
             error
         ) {
 
-            result.children.push({
-
-                wallet:
-                    nextAddress,
-
-                blockchain:
-                    network,
-
-                error:
-                    error.message
-            });
+            console.error(
+                "TRACE CHILD ERROR:",
+                error.message
+            );
         }
     }
 
-    return result;
+    return traceNode;
 }
 
 
@@ -5627,12 +2298,15 @@ function flattenTraceTransactions(
         trace.transactions ||
         []
     ) {
+
         output.push({
             ...tx,
+
             trace_level:
                 trace.current_depth ||
                 trace.depth ||
                 1,
+
             traced_wallet:
                 trace.wallet
         });
@@ -5643,6 +2317,7 @@ function flattenTraceTransactions(
         trace.children ||
         []
     ) {
+
         flattenTraceTransactions(
             child,
             output,
@@ -5660,11 +2335,10 @@ function flattenTraceTransactions(
 
 function flattenTraceGraph(
     trace,
-    nodes = new Map(),
+    nodes = [],
     edges = [],
-    visited = new Set()
+    parent = null
 ) {
-
     if (
         !trace ||
         !trace.wallet
@@ -5675,177 +2349,45 @@ function flattenTraceGraph(
         };
     }
 
-    const walletKey =
+    const nodeId =
         normalizeWallet(
             trace.wallet
         );
 
-    if (
-        visited.has(
-            walletKey
-        )
-    ) {
+    nodes.push({
 
-        return {
-            nodes,
-            edges
-        };
-    }
+        id:
+            nodeId,
 
-    visited.add(
-        walletKey
-    );
+        wallet:
+            trace.wallet,
 
-    if (
-        !nodes.has(
-            walletKey
-        )
-    ) {
+        depth:
+            trace.current_depth ||
+            trace.depth ||
+            1,
 
-        nodes.set(
-            walletKey,
-            {
-                id:
-                    trace.wallet,
+        transactionCount:
+            (
+                trace.transactions ||
+                []
+            ).length,
 
-                label:
-                    shortenAddress(
-                        trace.wallet
-                    ),
-
-                address:
-                    trace.wallet,
-
-                role:
-                    nodes.size === 0
-                        ? "investigated_wallet"
-                        : "traced_wallet"
-            }
-        );
-    }
-
-    for (
-        const tx of
-        trace.transactions ||
-        []
-    ) {
-
-        if (
-            !tx.from ||
-            !tx.to
-        ) {
-            continue;
-        }
-
-        const fromKey =
-            normalizeWallet(
-                tx.from
-            );
-
-        const toKey =
-            normalizeWallet(
-                tx.to
-            );
-
-        if (
-            !nodes.has(
-                fromKey
+        vasp:
+            getVaspAttribution(
+                trace.wallet
             )
-        ) {
+    });
 
-            nodes.set(
-                fromKey,
-                {
-                    id:
-                        tx.from,
-
-                    label:
-                        shortenAddress(
-                            tx.from
-                        ),
-
-                    address:
-                        tx.from,
-
-                    role:
-                        "counterparty"
-                }
-            );
-        }
-
-        if (
-            !nodes.has(
-                toKey
-            )
-        ) {
-
-            nodes.set(
-                toKey,
-                {
-                    id:
-                        tx.to,
-
-                    label:
-                        shortenAddress(
-                            tx.to
-                        ),
-
-                    address:
-                        tx.to,
-
-                    role:
-                        "counterparty"
-                }
-            );
-        }
+    if (parent) {
 
         edges.push({
 
-            id:
-                createHash(
-                    [
-                        tx.hash,
-                        tx.from,
-                        tx.to
-                    ].join(":")
-                ),
+            from:
+                parent,
 
-            source:
-                tx.from,
-
-            target:
-                tx.to,
-
-            amount:
-                Number(
-                    tx.amount ||
-                    tx.value ||
-                    0
-                ),
-
-            amountFormatted:
-                formatAmount(
-                    Number(
-                        tx.amount ||
-                        tx.value ||
-                        0
-                    )
-                ),
-
-            token:
-                tx.token,
-
-            blockchain:
-                tx.blockchain,
-
-            hash:
-                tx.hash,
-
-            timestamp:
-                tx.timestamp,
-
-            explorer_url:
-                tx.explorer_url
+            to:
+                nodeId
         });
     }
 
@@ -5859,7 +2401,7 @@ function flattenTraceGraph(
             child,
             nodes,
             edges,
-            visited
+            nodeId
         );
     }
 
@@ -5871,11 +2413,189 @@ function flattenTraceGraph(
 
 
 /* =========================================================
-   TRACE API
+   HEALTH
+========================================================= */
+
+app.get(
+    "/api/health",
+    (
+        req,
+        res
+    ) => {
+
+        res.json({
+
+            success:
+                true,
+
+            service:
+                "ChainTrace AI",
+
+            status:
+                "healthy",
+
+            timestamp:
+                new Date().toISOString(),
+
+            uptime:
+                process.uptime(),
+
+            supportedNetworks: [
+                "TRON",
+                "Ethereum",
+                "BNB Chain"
+            ]
+        });
+    }
+);
+
+
+/* =========================================================
+   NETWORKS
+========================================================= */
+
+app.get(
+    "/api/networks",
+    (
+        req,
+        res
+    ) => {
+
+        res.json({
+
+            success:
+                true,
+
+            networks: [
+
+                {
+                    id:
+                        "tron",
+
+                    name:
+                        "TRON",
+
+                    token:
+                        "TRC-20 USDT",
+
+                    contract:
+                        USDT_CONTRACT,
+
+                    explorer:
+                        getExplorerBase(
+                            "tron"
+                        )
+                },
+
+                {
+                    id:
+                        "ethereum",
+
+                    name:
+                        "Ethereum",
+
+                    token:
+                        "ERC-20 USDT",
+
+                    contract:
+                        ETH_USDT_CONTRACT,
+
+                    explorer:
+                        getExplorerBase(
+                            "ethereum"
+                        )
+                },
+
+                {
+                    id:
+                        "bnb",
+
+                    name:
+                        "BNB Chain",
+
+                    token:
+                        "BEP-20 USDT",
+
+                    contract:
+                        BNB_USDT_CONTRACT,
+
+                    explorer:
+                        getExplorerBase(
+                            "bnb"
+                        )
+                }
+            ]
+        });
+    }
+);
+
+
+/* =========================================================
+   VALIDATE WALLET
 ========================================================= */
 
 app.post(
-    "/api/trace",
+    "/api/validate-wallet",
+    (
+        req,
+        res
+    ) => {
+
+        const wallet =
+            safeString(
+                req.body?.wallet
+            );
+
+        const blockchain =
+            normalizeBlockchain(
+                req.body?.blockchain
+            );
+
+        const valid =
+            isValidBlockchainAddress(
+                wallet,
+                blockchain
+            );
+
+        res.json({
+
+            success:
+                true,
+
+            wallet:
+
+                wallet,
+
+            blockchain:
+
+                blockchain,
+
+            blockchain_name:
+                getBlockchainName(
+                    blockchain
+                ),
+
+            valid:
+                valid,
+
+            explorer:
+                valid
+                    ? getAddressExplorerUrl(
+                          wallet,
+                          blockchain
+                      )
+                    : null
+        });
+    }
+);
+
+
+/* =========================================================
+   TRANSACTIONS API
+========================================================= */
+
+app.post(
+    "/api/transactions",
     async (
         req,
         res
@@ -5885,8 +2605,7 @@ app.post(
 
             const wallet =
                 safeString(
-                    req.body?.wallet ||
-                    req.body?.address
+                    req.body?.wallet
                 );
 
             const blockchain =
@@ -5895,10 +2614,121 @@ app.post(
                 );
 
             const token =
-                String(
+                safeString(
                     req.body?.token ||
                     "USDT"
-                ).toUpperCase();
+                );
+
+            if (
+                !isValidBlockchainAddress(
+                    wallet,
+                    blockchain
+                )
+            ) {
+
+                return res.status(
+                    400
+                ).json({
+
+                    success:
+                        false,
+
+                    error:
+                        "Invalid wallet address."
+                });
+            }
+
+            const indexed =
+                await scalableBlockchainIndex(
+                    wallet,
+                    blockchain,
+                    token
+                );
+
+            const transactions =
+                sortTransactions(
+                    indexed.transactions ||
+                    []
+                );
+
+            res.json({
+
+                success:
+                    true,
+
+                wallet:
+                    wallet,
+
+                blockchain:
+                    blockchain,
+
+                blockchain_name:
+                    getBlockchainName(
+                        blockchain
+                    ),
+
+                token:
+                    token,
+
+                count:
+                    transactions.length,
+
+                transactions:
+                    transactions
+            });
+
+        } catch (
+            error
+        ) {
+
+            console.error(
+                "/api/transactions ERROR:",
+                error
+            );
+
+            res.status(
+                500
+            ).json({
+
+                success:
+                    false,
+
+                error:
+                    error.message
+            });
+        }
+    }
+);
+
+
+/* =========================================================
+   ANALYZE API
+========================================================= */
+
+app.post(
+    "/api/analyze",
+    async (
+        req,
+        res
+    ) => {
+
+        try {
+
+            const wallet =
+                safeString(
+                    req.body?.wallet
+                );
+
+            const blockchain =
+                normalizeBlockchain(
+                    req.body?.blockchain
+                );
+
+            const token =
+                safeString(
+                    req.body?.token ||
+                    "USDT"
+                );
 
             const depthValue =
                 safeString(
@@ -5918,19 +2748,446 @@ app.post(
                         5
                     );
 
-            if (!wallet) {
+            if (
+                !isValidBlockchainAddress(
+                    wallet,
+                    blockchain
+                )
+            ) {
 
-                return res
-                    .status(400)
-                    .json({
+                return res.status(
+                    400
+                ).json({
 
-                        success:
-                            false,
+                    success:
+                        false,
 
-                        error:
-                            "Wallet address is required."
-                    });
+                    error:
+                        "Invalid wallet address."
+                });
             }
+
+            const cacheKey =
+                hashObject({
+                    wallet:
+                        normalizeWallet(
+                            wallet
+                        ),
+
+                    blockchain,
+
+                    token,
+
+                    depth
+                });
+
+            const cached =
+                getCache(
+                    analysisCache,
+                    cacheKey,
+                    INDEXER_CACHE_TTL
+                );
+
+            if (cached) {
+                return res.json(
+                    cached
+                );
+            }
+
+            const indexed =
+                await scalableBlockchainIndex(
+                    wallet,
+                    blockchain,
+                    token
+                );
+
+            const directTransactions =
+                sortTransactions(
+                    (
+                        indexed.transactions ||
+                        []
+                    ).map(
+                        tx =>
+                            normalizeTransaction(
+                                tx,
+                                blockchain,
+                                wallet
+                            )
+                    )
+                );
+
+            let trace = null;
+
+            let traceTransactions = [];
+
+            let transactions =
+                directTransactions;
+
+            /*
+             * Depth > 1 or ALL:
+             * trace connected wallets and merge
+             * all discovered transactions.
+             */
+
+            if (
+                depth === "all" ||
+                Number(depth) > 1
+            ) {
+
+                try {
+
+                    trace =
+                        await traceWallet(
+                            wallet,
+                            blockchain,
+                            token,
+                            depth
+                        );
+
+                    traceTransactions =
+                        flattenTraceTransactions(
+                            trace
+                        );
+
+                    const merged =
+                        new Map();
+
+                    for (
+                        const tx of
+                        [
+                            ...directTransactions,
+                            ...traceTransactions
+                        ]
+                    ) {
+
+                        const key =
+                            [
+                                tx.hash,
+                                tx.from,
+                                tx.to,
+                                tx.amount
+                            ].join("|");
+
+                        if (
+                            !merged.has(
+                                key
+                            )
+                        ) {
+                            merged.set(
+                                key,
+                                tx
+                            );
+                        }
+                    }
+
+                    transactions =
+                        sortTransactions(
+                            Array.from(
+                                merged.values()
+                            )
+                        );
+
+                } catch (
+                    traceError
+                ) {
+
+                    console.error(
+                        "ANALYZE TRACE ERROR:",
+                        traceError.message
+                    );
+
+                    trace =
+                        null;
+
+                    traceTransactions =
+                        [];
+                }
+            }
+
+            const statistics =
+                calculateStatistics(
+                    wallet,
+                    transactions
+                );
+
+            const riskScore =
+                calculateRiskScore(
+                    wallet,
+                    transactions
+                );
+
+            const typologies =
+                detectTypologies(
+                    wallet,
+                    transactions
+                );
+
+            const vasp =
+                getVaspAttribution(
+                    wallet
+                );
+
+            const complaints =
+                getComplaintsForWallet(
+                    wallet
+                );
+
+            const incoming =
+                transactions.filter(
+                    tx =>
+                        sameWallet(
+                            tx.to,
+                            wallet
+                        )
+                );
+
+            const outgoing =
+                transactions.filter(
+                    tx =>
+                        sameWallet(
+                            tx.from,
+                            wallet
+                        )
+                );
+
+            const counterparties =
+                new Set();
+
+            for (
+                const tx of
+                transactions
+            ) {
+
+                if (
+                    sameWallet(
+                        tx.from,
+                        wallet
+                    )
+                ) {
+
+                    if (tx.to) {
+                        counterparties.add(
+                            tx.to
+                        );
+                    }
+
+                } else if (
+                    sameWallet(
+                        tx.to,
+                        wallet
+                    )
+                ) {
+
+                    if (tx.from) {
+                        counterparties.add(
+                            tx.from
+                        );
+                    }
+                }
+            }
+
+            const response = {
+
+                success:
+                    true,
+
+                wallet:
+                    wallet,
+
+                blockchain:
+                    blockchain,
+
+                blockchain_name:
+                    getBlockchainName(
+                        blockchain
+                    ),
+
+                token:
+                    token,
+
+                depth:
+                    depth,
+
+                depthLabel:
+                    depth === "all"
+                        ? "ALL"
+                        : `Depth ${depth}`,
+
+                explorer:
+                    getAddressExplorerUrl(
+                        wallet,
+                        blockchain
+                    ),
+
+                vasp:
+                    vasp,
+
+                complaints:
+                    complaints,
+
+                complaintCount:
+                    complaints.length,
+
+                riskScore:
+                    riskScore,
+
+                risk:
+                    riskScore >= 80
+                        ? "HIGH"
+                        : riskScore >= 50
+                            ? "MEDIUM"
+                            : "LOW",
+
+                statistics:
+                    statistics,
+
+                summary: {
+
+                    totalTransactions:
+                        transactions.length,
+
+                    incomingTransactions:
+                        incoming.length,
+
+                    outgoingTransactions:
+                        outgoing.length,
+
+                    incomingAmount:
+                        roundNumber(
+                            incoming.reduce(
+                                (
+                                    total,
+                                    tx
+                                ) =>
+                                    total +
+                                    toNumber(
+                                        tx.amount
+                                    ),
+                                0
+                            ),
+                            6
+                        ),
+
+                    outgoingAmount:
+                        roundNumber(
+                            outgoing.reduce(
+                                (
+                                    total,
+                                    tx
+                                ) =>
+                                    total +
+                                    toNumber(
+                                        tx.amount
+                                    ),
+                                0
+                            ),
+                            6
+                        ),
+
+                    uniqueCounterparties:
+                        counterparties.size
+                },
+
+                typologies:
+                    typologies,
+
+                directTransactions:
+                    directTransactions,
+
+                trace:
+                    trace,
+
+                traceTransactions:
+                    traceTransactions,
+
+                transactions:
+                    transactions,
+
+                allTransactions:
+                    transactions
+            };
+
+            setCache(
+                analysisCache,
+                cacheKey,
+                response
+            );
+
+            res.json(
+                response
+            );
+
+        } catch (
+            error
+        ) {
+
+            console.error(
+                "/api/analyze ERROR:",
+                error
+            );
+
+            res.status(
+                500
+            ).json({
+
+                success:
+                    false,
+
+                error:
+                    error.message ||
+                    "Analysis failed."
+            });
+        }
+    }
+);
+
+
+/* =========================================================
+   TRACE API
+========================================================= */
+
+app.post(
+    "/api/trace",
+    async (
+        req,
+        res
+    ) => {
+
+        try {
+
+            const wallet =
+                safeString(
+                    req.body?.wallet
+                );
+
+            const blockchain =
+                normalizeBlockchain(
+                    req.body?.blockchain
+                );
+
+            const token =
+                safeString(
+                    req.body?.token ||
+                    "USDT"
+                );
+
+            const depthValue =
+                safeString(
+                    req.body?.depth
+                ).toLowerCase();
+
+            const depth =
+                depthValue === "all"
+                    ? "all"
+                    : Math.min(
+                        Math.max(
+                            Number(
+                                depthValue
+                            ) || 1,
+                            1
+                        ),
+                        5
+                    );
 
             if (
                 !isValidBlockchainAddress(
@@ -5939,18 +3196,16 @@ app.post(
                 )
             ) {
 
-                return res
-                    .status(400)
-                    .json({
+                return res.status(
+                    400
+                ).json({
 
-                        success:
-                            false,
+                    success:
+                        false,
 
-                        error:
-                            `Invalid ${getBlockchainName(
-                                blockchain
-                            )} wallet address.`
-                    });
+                    error:
+                        "Invalid wallet address."
+                });
             }
 
             const trace =
@@ -5961,41 +3216,57 @@ app.post(
                     depth
                 );
 
-            const flattened =
+            const graph =
                 flattenTraceGraph(
                     trace
                 );
 
-            return res.json({
+            const traceTransactions =
+                flattenTraceTransactions(
+                    trace
+                );
+
+            res.json({
 
                 success:
                     true,
 
-                wallet,
+                wallet:
+                    wallet,
 
-                blockchain,
+                blockchain:
+                    blockchain,
 
                 blockchain_name:
                     getBlockchainName(
                         blockchain
                     ),
 
-                token,
+                token:
+                    token,
 
-                depth,
+                depth:
+                    depth,
 
-                trace,
+                depthLabel:
+                    depth === "all"
+                        ? "ALL"
+                        : `Depth ${depth}`,
 
-                graph: {
+                trace:
+                    trace,
 
-                    nodes:
-                        Array.from(
-                            flattened.nodes.values()
-                        ),
+                graph:
+                    graph,
 
-                    edges:
-                        flattened.edges
-                }
+                traceTransactions:
+                    traceTransactions,
+
+                transactions:
+                    traceTransactions,
+
+                allTransactions:
+                    traceTransactions
             });
 
         } catch (
@@ -6003,46 +3274,38 @@ app.post(
         ) {
 
             console.error(
-                "TRACE ERROR:",
+                "/api/trace ERROR:",
                 error
             );
 
-            return res
-                .status(500)
-                .json({
+            res.status(
+                500
+            ).json({
 
-                    success:
-                        false,
+                success:
+                    false,
 
-                    error:
-                        error.message ||
-                        "Fund tracing failed."
-                });
+                error:
+                    error.message ||
+                    "Trace failed."
+            });
         }
     }
 );
 
 
 /* =========================================================
-   REALTIME ALERT CREATOR
+   REALTIME HELPERS
 ========================================================= */
 
 function createRealtimeAlert(
     watcher,
     transaction
 ) {
-
     const alert = {
 
         id:
-            createHash(
-                [
-                    watcher.wallet,
-                    watcher.blockchain,
-                    transaction.hash,
-                    Date.now()
-                ].join(":")
-            ),
+            crypto.randomUUID(),
 
         wallet:
             watcher.wallet,
@@ -6050,136 +3313,80 @@ function createRealtimeAlert(
         blockchain:
             watcher.blockchain,
 
-        blockchain_name:
-            getBlockchainName(
-                watcher.blockchain
-            ),
-
         token:
             watcher.token,
 
-        transaction_hash:
-            transaction.hash,
-
-        direction:
-            transaction.direction,
-
-        amount:
-            transaction.amount,
-
-        from:
-            transaction.from,
-
-        to:
-            transaction.to,
+        type:
+            "new_transaction",
 
         timestamp:
-            transaction.timestamp,
+            Date.now(),
 
-        date:
-            transaction.date,
-
-        explorer_url:
-            transaction.explorer_url,
-
-        created_at:
-            new Date().toISOString(),
-
-        severity:
-            Number(
-                transaction.amount ||
-                transaction.value ||
-                0
-            ) >= 10000
-                ? "HIGH"
-                : "INFO"
+        transaction:
+            transaction
     };
 
     realtimeAlerts.unshift(
         alert
     );
 
-    /*
-     * Keep only the latest 500 alerts.
-     */
-
     if (
         realtimeAlerts.length >
-        500
+        1000
     ) {
-
-        realtimeAlerts.splice(
-            500
-        );
+        realtimeAlerts.length =
+            1000;
     }
 
     return alert;
 }
 
 
-/* =========================================================
-   REALTIME WATCH CHECK
-========================================================= */
-
 async function checkRealtimeWatcher(
     watcher
 ) {
+    if (
+        !watcher.active
+    ) {
+        return;
+    }
 
     try {
 
         const indexed =
             await scalableBlockchainIndex(
                 watcher.wallet,
-                watcher.token,
-                watcher.blockchain
+                watcher.blockchain,
+                watcher.token
             );
 
-        const normalized =
+        const transactions =
             sortTransactions(
-                indexed.transactions
-                    .map(
-                        tx =>
-                            normalizeTransaction(
-                                tx,
-                                watcher.wallet,
-                                watcher.blockchain
-                            )
-                    )
+                indexed.transactions ||
+                []
             );
+
+        const previousHashes =
+            watcher.seenHashes ||
+            new Set();
 
         const newTransactions =
             [];
 
         for (
-            const tx of normalized
+            const tx of
+            transactions
         ) {
 
             if (
-                !tx.hash
-            ) {
-                continue;
-            }
-
-            if (
-                watcher.seenHashes.has(
+                !previousHashes.has(
                     tx.hash
                 )
             ) {
-                continue;
-            }
 
-            watcher.seenHashes.add(
-                tx.hash
-            );
-
-            /*
-             * Do not alert for the first historical
-             * batch when the watcher is initialized.
-             */
-
-            if (
-                watcher.initialized
-            ) {
+                previousHashes.add(
+                    tx.hash
+                );
 
                 newTransactions.push(
                     tx
@@ -6187,93 +3394,47 @@ async function checkRealtimeWatcher(
             }
         }
 
-        if (
-            !watcher.initialized
-        ) {
-
-            watcher.initialized =
-                true;
-
-            watcher.lastCheck =
-                new Date().toISOString();
-
-            return {
-
-                newTransactions:
-                    [],
-
-                alerts:
-                    []
-            };
-        }
-
-        const alerts =
-            [];
-
-        for (
-            const tx of newTransactions
-        ) {
-
-            const alert =
-                createRealtimeAlert(
-                    watcher,
-                    tx
-                );
-
-            alerts.push(
-                alert
-            );
-        }
+        watcher.seenHashes =
+            previousHashes;
 
         watcher.lastCheck =
-            new Date().toISOString();
+            Date.now();
 
         watcher.lastTransactionCount =
-            normalized.length;
+            transactions.length;
 
         watcher.lastError =
             null;
 
-        return {
+        for (
+            const tx of
+            newTransactions
+        ) {
+            createRealtimeAlert(
+                watcher,
+                tx
+            );
+        }
 
-            newTransactions,
-
-            alerts
-        };
+        return newTransactions;
 
     } catch (
         error
     ) {
 
+        watcher.lastCheck =
+            Date.now();
+
         watcher.lastError =
             error.message;
 
-        watcher.lastCheck =
-            new Date().toISOString();
-
-        console.error(
-            "REALTIME WATCH ERROR:",
-            watcher.wallet,
-            error.message
-        );
-
-        return {
-
-            newTransactions:
-                [],
-
-            alerts:
-                [],
-
-            error:
-                error.message
-        };
+        throw error;
     }
 }
 
 
 /* =========================================================
-   REALTIME WATCH START
+   REALTIME WATCH
 ========================================================= */
 
 app.post(
@@ -6287,8 +3448,7 @@ app.post(
 
             const wallet =
                 safeString(
-                    req.body?.wallet ||
-                    req.body?.address
+                    req.body?.wallet
                 );
 
             const blockchain =
@@ -6297,24 +3457,10 @@ app.post(
                 );
 
             const token =
-                String(
+                safeString(
                     req.body?.token ||
                     "USDT"
-                ).toUpperCase();
-
-            if (!wallet) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "Wallet address is required."
-                    });
-            }
+                );
 
             if (
                 !isValidBlockchainAddress(
@@ -6323,29 +3469,22 @@ app.post(
                 )
             ) {
 
-                return res
-                    .status(400)
-                    .json({
+                return res.status(
+                    400
+                ).json({
 
-                        success:
-                            false,
+                    success:
+                        false,
 
-                        error:
-                            `Invalid ${getBlockchainName(
-                                blockchain
-                            )} wallet address.`
-                    });
+                    error:
+                        "Invalid wallet address."
+                });
             }
 
             const key =
                 normalizeWallet(
                     wallet
                 );
-
-            /*
-             * Existing watcher is updated instead
-             * of creating a duplicate watcher.
-             */
 
             let watcher =
                 realtimeWatchers.get(
@@ -6356,14 +3495,20 @@ app.post(
 
                 watcher = {
 
-                    wallet,
+                    wallet:
+                        wallet,
 
-                    blockchain,
+                    blockchain:
+                        blockchain,
 
-                    token,
+                    token:
+                        token,
+
+                    active:
+                        true,
 
                     createdAt:
-                        new Date().toISOString(),
+                        Date.now(),
 
                     lastCheck:
                         null,
@@ -6371,17 +3516,11 @@ app.post(
                     lastError:
                         null,
 
-                    initialized:
-                        false,
-
                     lastTransactionCount:
                         0,
 
                     seenHashes:
-                        new Set(),
-
-                    active:
-                        true
+                        new Set()
                 };
 
                 realtimeWatchers.set(
@@ -6399,16 +3538,13 @@ app.post(
 
                 watcher.active =
                     true;
-
-                watcher.lastError =
-                    null;
             }
 
             await checkRealtimeWatcher(
                 watcher
             );
 
-            return res.json({
+            res.json({
 
                 success:
                     true,
@@ -6416,22 +3552,22 @@ app.post(
                 watching:
                     true,
 
-                wallet,
+                wallet:
+                    wallet,
 
-                blockchain,
+                blockchain:
+                    blockchain,
 
                 blockchain_name:
                     getBlockchainName(
                         blockchain
                     ),
 
-                token,
+                token:
+                    token,
 
                 watcherCount:
-                    realtimeWatchers.size,
-
-                message:
-                    "Real-time wallet monitoring started."
+                    realtimeWatchers.size
             });
 
         } catch (
@@ -6439,28 +3575,27 @@ app.post(
         ) {
 
             console.error(
-                "WATCH ERROR:",
+                "/api/realtime/watch ERROR:",
                 error
             );
 
-            return res
-                .status(500)
-                .json({
+            res.status(
+                500
+            ).json({
 
-                    success:
-                        false,
+                success:
+                    false,
 
-                    error:
-                        error.message ||
-                        "Unable to start real-time monitoring."
-                });
+                error:
+                    error.message
+            });
         }
     }
 );
 
 
 /* =========================================================
-   REALTIME WATCH STOP
+   REALTIME UNWATCH
 ========================================================= */
 
 app.post(
@@ -6470,74 +3605,45 @@ app.post(
         res
     ) => {
 
-        try {
+        const wallet =
+            safeString(
+                req.body?.wallet
+            );
 
-            const wallet =
-                safeString(
-                    req.body?.wallet ||
-                    req.body?.address
-                );
+        const key =
+            normalizeWallet(
+                wallet
+            );
 
-            if (!wallet) {
+        const watcher =
+            realtimeWatchers.get(
+                key
+            );
 
-                return res
-                    .status(400)
-                    .json({
+        if (watcher) {
 
-                        success:
-                            false,
+            watcher.active =
+                false;
 
-                        error:
-                            "Wallet address is required."
-                    });
-            }
+            realtimeWatchers.delete(
+                key
+            );
+        }
 
-            const key =
-                normalizeWallet(
-                    wallet
-                );
+        res.json({
 
-            const removed =
-                realtimeWatchers.delete(
-                    key
-                );
+            success:
+                true,
 
-            return res.json({
+            watching:
+                false,
 
-                success:
-                    true,
-
-                watching:
-                    false,
-
+            wallet:
                 wallet,
 
-                removed,
-
-                watcherCount:
-                    realtimeWatchers.size,
-
-                message:
-                    removed
-                        ? "Real-time wallet monitoring stopped."
-                        : "Wallet was not being monitored."
-            });
-
-        } catch (
-            error
-        ) {
-
-            return res
-                .status(500)
-                .json({
-
-                    success:
-                        false,
-
-                    error:
-                        error.message
-                });
-        }
+            watcherCount:
+                realtimeWatchers.size
+        });
     }
 );
 
@@ -6623,12 +3729,7 @@ app.get(
             });
         }
 
-        /*
-         * Do not expose the full wallet watchlist.
-         * Only return aggregate monitoring status.
-         */
-
-        return res.json({
+        res.json({
 
             success:
                 true,
@@ -6714,7 +3815,7 @@ app.get(
                 );
         }
 
-        return res.json({
+        res.json({
 
             success:
                 true,
@@ -7059,8 +4160,7 @@ process.on(
     () =>
         shutdown(
             "SIGTERM"
-        )
-);
+        );
 
 
 /* =========================================================
@@ -7089,12 +4189,3 @@ process.on(
         );
     }
 );
-const SOLANA_RPC_URL = (
-    process.env.SOLANA_RPC_URL ||
-    "https://api.mainnet-beta.solana.com"
-).replace(/\/+$/, "");
-
-const SOLANA_USDT_MINT = (
-    process.env.USDT_SOLANA_MINT ||
-    ""
-).trim();
