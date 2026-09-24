@@ -1837,6 +1837,10 @@
                 <option value="5">
                     Depth 5
                 </option>
+
+                <option value="all">
+                    ALL
+                </option>
             </select>
 
             <button
@@ -2937,10 +2941,12 @@ async function analyzeWallet() {
         token = "USDT";
     }
 
+    const depthValue = depthInput.value;
+
     const depth =
-        Number(
-            depthInput.value
-        ) || 1;
+        depthValue === "all"
+            ? "all"
+            : Number(depthValue) || 1;
 
     if (!wallet) {
         alert(
@@ -4294,11 +4300,19 @@ function updateTransactionSearchMeta(visibleCount, totalCount, query = "") {
         return;
     }
 
+    const isAllDepth =
+        document.getElementById("depthInput")?.value === "all";
+
     if (!query) {
-        const visible = Math.min(totalCount, MAX_VISIBLE_TRANSACTION_ROWS);
-        meta.innerHTML = totalCount > MAX_VISIBLE_TRANSACTION_ROWS
-            ? `<strong>${totalCount.toLocaleString()}</strong> total transactions • showing first <strong>${visible.toLocaleString()}</strong> • search to find any address`
-            : `<strong>${totalCount.toLocaleString()}</strong> transactions loaded`;
+        const visible = isAllDepth
+            ? totalCount
+            : Math.min(totalCount, MAX_VISIBLE_TRANSACTION_ROWS);
+
+        meta.innerHTML = isAllDepth
+            ? `<strong>${totalCount.toLocaleString()}</strong> transactions loaded • ALL depth selected`
+            : totalCount > MAX_VISIBLE_TRANSACTION_ROWS
+                ? `<strong>${totalCount.toLocaleString()}</strong> total transactions • showing first <strong>${visible.toLocaleString()}</strong> • search to find any address`
+                : `<strong>${totalCount.toLocaleString()}</strong> transactions loaded`;
         return;
     }
 
@@ -4336,7 +4350,13 @@ function renderTransactionRows(transactions) {
         return;
     }
 
-    const visibleTransactions = transactions.slice(0, MAX_VISIBLE_TRANSACTION_ROWS);
+    const isAllDepth =
+        document.getElementById("depthInput")?.value === "all";
+
+    const visibleTransactions = isAllDepth
+        ? transactions
+        : transactions.slice(0, MAX_VISIBLE_TRANSACTION_ROWS);
+
     container.innerHTML = "";
 
     visibleTransactions.forEach(tx => {
@@ -4434,7 +4454,7 @@ function renderTransactionRows(transactions) {
         container.appendChild(row);
     });
 
-    if (transactions.length > MAX_VISIBLE_TRANSACTION_ROWS) {
+    if (!isAllDepth && transactions.length > MAX_VISIBLE_TRANSACTION_ROWS) {
         const row = document.createElement("tr");
         row.innerHTML = `
             <td colspan="6" style="color:#8297a3; padding:12px;">
