@@ -5000,7 +5000,7 @@ app.post(
                     blockchain,
                     {
                         forceRefresh: true,
-                        maxPages: 100
+                        maxPages: INDEXER_MAX_PAGES
                     }
                 );
 
@@ -5172,7 +5172,7 @@ app.post(
                 token,
 
                 total_indexed_transactions:
-                    allTransactions.length,
+                    indexed.transactions.length,
 
                 vasp,
 
