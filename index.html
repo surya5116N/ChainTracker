@@ -2759,40 +2759,9 @@ let liveTrackLastFutureHashes = new Set();
 let transactionTypeFilter = "ALL";
 
 
-// =========================================================
-// CHAINTRACE API CONFIG
-// =========================================================
-// Same-domain deployment (recommended): keep this empty.
-// Separate frontend/backend deployment: set the backend URL here,
-// for example: "https://your-backend.onrender.com"
-// You can also override it with window.CHAINTRACE_API_URL.
-const CONFIGURED_API_URL = "";
+const API_BASE_URL =
+    window.CHAINTRACE_API_URL = "http://localhost:3000";
 
-const API_BASE_URL = (
-    window.CHAINTRACE_API_URL ||
-    CONFIGURED_API_URL ||
-    (window.location.protocol === "file:" ? "http://localhost:3000" : "")
-).replace(/\/$/, "");
-
-
-/* =========================================================
-   API ERROR HELPER
-========================================================= */
-function chainTraceApiError(response, bodyText) {
-    if (response.status === 405) {
-        return new Error(
-            "API 405: this frontend is calling a server that does not expose POST /api/analyze. " +
-            "Deploy the ChainTrace backend and set CONFIGURED_API_URL to that backend URL."
-        );
-    }
-
-    let message = bodyText || `HTTP ${response.status}`;
-    try {
-        const parsed = JSON.parse(bodyText);
-        message = parsed.error || parsed.message || message;
-    } catch (_) {}
-    return new Error(message);
-}
 
 /* =========================================================
    INIT
