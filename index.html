@@ -277,7 +277,7 @@
                 grid;
 
             grid-template-columns:
-                repeat(4, 1fr);
+                repeat(auto-fit, minmax(180px, 1fr));
 
             gap:
                 12px;
@@ -448,7 +448,7 @@
         /* ===== TRANSACTION SEARCH ===== */
         .transaction-search-bar {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0, 1fr) auto auto;
             gap: 10px;
             margin: 0 0 12px 0;
             align-items: center;
@@ -499,9 +499,88 @@
             background: #193744;
         }
 
+        /* ===== TRANSACTION TYPE FILTER ===== */
+        .transaction-type-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 185px;
+            padding: 4px 6px 4px 10px;
+            border: 1px solid #173b49;
+            border-radius: 10px;
+            background: #06131a;
+            box-shadow: inset 0 0 12px rgba(0, 210, 255, 0.04);
+        }
+
+        .transaction-type-label {
+            color: #20cfff;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: .6px;
+            white-space: nowrap;
+        }
+
+        .transaction-type-select {
+            width: 135px;
+            padding: 9px 30px 9px 11px;
+            border: 1px solid #245365;
+            border-radius: 8px;
+            outline: none;
+            background: #0a1b24;
+            color: #eaffff;
+            font-size: 11px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all .18s ease;
+        }
+
+        .transaction-type-select:hover,
+        .transaction-type-select:focus {
+            border-color: #20cfff;
+            box-shadow: 0 0 12px rgba(32, 207, 255, .22);
+        }
+
+        .transaction-type-select option {
+            background: #07141b;
+            color: #eaffff;
+            font-weight: 700;
+        }
+
+        .transaction-type-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 76px;
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: .2px;
+        }
+
+        .transaction-type-pill.sent {
+            color: #ff9da5;
+            background: rgba(216, 61, 77, .22);
+            border: 1px solid rgba(255, 93, 105, .28);
+        }
+
+        .transaction-type-pill.received {
+            color: #4ff0bf;
+            background: rgba(16, 201, 149, .18);
+            border: 1px solid rgba(36, 232, 174, .25);
+        }
+
         @media (max-width: 700px) {
             .transaction-search-bar {
                 grid-template-columns: 1fr;
+            }
+
+            .transaction-type-filter {
+                justify-content: stretch;
+            }
+
+            .transaction-type-btn {
+                flex: 1;
             }
 
             .transaction-search-meta {
@@ -1755,300 +1834,159 @@
         }
         .trace-btn {
             width: auto;
-            padding: 7px 10px;
+            min-width: 76px;
+            padding: 8px 14px;
+            border: 1px solid #2bd4ff;
+            border-radius: 7px;
+            background: linear-gradient(135deg, #0f9ed1, #176bff);
+            color: #ffffff;
             font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .5px;
+            box-shadow: 0 0 10px rgba(43,212,255,.22), inset 0 1px 0 rgba(255,255,255,.14);
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+        }
+        .trace-btn:hover {
+            background: linear-gradient(135deg, #18b9ef, #2d7dff);
+            box-shadow: 0 0 16px rgba(43,212,255,.48), 0 0 28px rgba(45,125,255,.18);
+            transform: translateY(-1px);
+            filter: brightness(1.12);
+        }
+        .trace-btn:active {
+            transform: translateY(0);
         }
         .trace-cell {
             text-align: center;
-        }
-
-
-        /* ===== FIXED LEFT NAVIGATION ===== */
-        .chaintrace-shell {
-            position: relative;
-        }
-
-        .chaintrace-nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 248px;
-            max-height: 100vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 18px 12px 16px;
-            border: 0;
-            border-right: 1px solid #1b3442;
-            border-radius: 0;
-            background: rgba(8, 15, 29, .985);
-            box-shadow: 8px 0 30px rgba(0,0,0,.28);
-            z-index: 1000;
-            backdrop-filter: blur(10px);
-        }
-
-        .chaintrace-nav::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .chaintrace-nav::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .chaintrace-nav::-webkit-scrollbar-thumb {
-            background: #263a4a;
-            border-radius: 8px;
-        }
-
-        .chaintrace-nav-title {
-            padding: 4px 10px 10px;
-            color: #39c8ef;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .chaintrace-nav button {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            width: 100%;
-            margin: 3px 0;
-            padding: 9px 10px;
-            border: 1px solid transparent;
-            border-radius: 9px;
-            background: transparent;
-            color: #91aab4;
-            text-align: left;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: .18s ease;
-        }
-
-        .chaintrace-nav button:hover,
-        .chaintrace-nav button.active {
-            color: #e9fbff;
-            border-color: #16627b;
-            background: linear-gradient(90deg, rgba(18,105,168,.28), rgba(24,61,76,.32));
-            box-shadow: inset 3px 0 0 #39c8ef, 0 0 12px rgba(57,200,239,.08);
-        }
-
-        .chaintrace-nav .nav-icon {
-            width: 23px;
-            height: 23px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 23px;
-            border: 1px solid #1e657c;
-            border-radius: 7px;
-            color: #39c8ef;
-            font-size: 11px;
-        }
-
-        html {
-            scroll-behavior: smooth;
-            scroll-padding-top: 20px;
-        }
-
-        .container {
-            width: calc(100% - 278px);
-            max-width: 1450px;
-            margin-left: 268px;
-            margin-right: 10px;
-        }
-
-        .nav-target {
-            scroll-margin-top: 20px;
-        }
-
-        @media (max-width: 1050px) {
-            .chaintrace-nav {
-                width: 220px;
-            }
-            .container {
-                width: calc(100% - 240px);
-                margin-left: 230px;
-                margin-right: 10px;
-            }
-        }
-
-        @media (max-width: 760px) {
-            .chaintrace-nav {
-                top: auto;
-                bottom: 10px;
-                right: 10px;
-                left: 10px;
-                transform: none;
-                width: auto;
-                max-height: 96px;
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                overflow-x: auto;
-                overflow-y: hidden;
-                padding: 8px;
-            }
-
-            .chaintrace-nav-title {
-                display: none;
-            }
-
-            .chaintrace-nav button {
-                flex: 0 0 auto;
-                width: auto;
-                min-width: 88px;
-                justify-content: center;
-                padding: 8px 9px;
-            }
-
-            .chaintrace-nav button .nav-label {
-                display: none;
-            }
-
-            .container {
-                width: 95%;
-                margin: 25px auto 120px;
-            }
-        }
-
-        /* ===== TRANSACTION TABLE DESIGN ===== */
-        .transaction-controls {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto auto;
-            gap: 9px;
-            margin-bottom: 12px;
-            align-items: center;
-        }
-
-        .transaction-type-filter {
-            width: auto;
-            min-width: 125px;
-            padding: 10px 12px;
-        }
-
-        .transaction-table-wrap {
-            overflow-x: auto;
-            border: 1px solid #18313d;
-            border-radius: 10px;
-            background: #050d12;
-        }
-
-        .transaction-table {
-            min-width: 1120px;
-        }
-
-        .transaction-table th {
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            background: #0b1b24;
-            border-bottom: 1px solid #20566b;
-            padding: 11px 10px;
-            text-transform: uppercase;
-            font-size: 10px;
-            letter-spacing: .4px;
-        }
-
-        .transaction-table td {
-            padding: 10px;
-            vertical-align: middle;
             white-space: nowrap;
         }
-
-        .transaction-table tbody tr:hover {
-            background: rgba(24, 105, 145, .09);
-        }
-
-        .tx-type-pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 72px;
-            padding: 5px 9px;
-            border-radius: 999px;
-            font-size: 9px;
-            font-weight: 800;
-            letter-spacing: .5px;
-            border: 1px solid;
-        }
-
-        .tx-type-pill.sent {
-            color: #ff8d8d;
-            border-color: rgba(255,119,119,.42);
-            background: rgba(255,119,119,.08);
-        }
-
-        .tx-type-pill.received {
-            color: #72e09a;
-            border-color: rgba(101,211,139,.42);
-            background: rgba(101,211,139,.08);
-        }
-
-        .tx-type-pill.other {
-            color: #9fc8d5;
-            border-color: #315767;
-            background: rgba(49,87,103,.12);
-        }
-
-        .tx-address {
-            max-width: 310px;
-            color: #c9e1e8;
-            font: 10px/1.45 Consolas, monospace;
+        .tx-address-cell {
+            min-width: 250px;
+            max-width: 420px;
             white-space: normal !important;
             overflow-wrap: anywhere;
             word-break: break-all;
+            color: #d9edf4 !important;
+            font-family: Consolas, monospace;
+            font-size: 10px;
+            line-height: 1.45;
+        }
+        .tx-time-cell {
+            min-width: 155px;
+            color: #9fc8d5 !important;
+            font-family: Consolas, monospace;
+            font-size: 10px;
+            line-height: 1.4;
+            white-space: nowrap !important;
+        }
+        .tx-time-date {
+            display: block;
+            color: #dff3fa;
+            font-weight: 700;
+        }
+        .tx-time-zone {
+            display: block;
+            margin-top: 2px;
+            color: #718a94;
+            font-size: 9px;
         }
 
-        .tx-hash {
-            max-width: 250px;
-            color: #7fb6c8;
-            font: 10px/1.45 Consolas, monospace;
-            white-space: normal !important;
-            overflow-wrap: anywhere;
-        }
 
-        .tx-amount {
-            color: #65d38b;
-            font: 700 11px/1.4 Consolas, monospace;
-            white-space: nowrap;
-        }
 
-        .tx-date {
-            color: #a9c2ca;
-            font: 10px/1.4 Consolas, monospace;
-            white-space: nowrap;
+        /* ===== UNIQUE SECTION SIDEBAR ===== */
+        .ct-sidebar {
+            position: fixed;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 50;
+            width: 178px;
+            padding: 10px;
+            border: 1px solid #16475a;
+            border-radius: 16px;
+            background: rgba(4, 15, 21, .96);
+            box-shadow: 0 18px 55px rgba(0,0,0,.48), 0 0 28px rgba(32,207,255,.08);
+            backdrop-filter: blur(12px);
         }
-
-        .tx-trace-btn {
-            width: auto !important;
-            min-width: 68px;
-            padding: 7px 12px !important;
-            border: 1px solid #23d7ff !important;
-            border-radius: 7px !important;
-            background: rgba(13, 48, 60, .75) !important;
-            color: #59e6ff !important;
-            box-shadow: 0 0 9px rgba(35,215,255,.14), inset 0 0 8px rgba(35,215,255,.06);
-            font-size: 9px !important;
-            letter-spacing: .4px;
+        .ct-sidebar-title {
+            padding: 7px 9px 10px;
+            color: #20cfff;
+            font: 900 10px/1.2 Arial, sans-serif;
+            letter-spacing: 1.4px;
+            text-transform: uppercase;
         }
-
-        .tx-trace-btn:hover {
-            background: rgba(18,105,168,.55) !important;
-            box-shadow: 0 0 16px rgba(35,215,255,.25), inset 0 0 10px rgba(35,215,255,.10);
-            color: #eaffff !important;
+        .ct-sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 72vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
         }
-
-        @media (max-width: 700px) {
-            .transaction-controls {
-                grid-template-columns: 1fr;
+        .ct-side-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px 9px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            background: transparent;
+            color: #8da7b1;
+            font-size: 10px;
+            font-weight: 800;
+            text-align: left;
+            cursor: pointer;
+            transition: .16s ease;
+        }
+        .ct-side-link .ct-side-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 20px;
+            border: 1px solid #1b5265;
+            border-radius: 6px;
+            color: #20cfff;
+            font-size: 10px;
+            background: #071820;
+        }
+        .ct-side-link:hover,
+        .ct-side-link.active {
+            color: #eaffff;
+            border-color: #17617a;
+            background: linear-gradient(90deg, rgba(14,103,132,.34), rgba(9,31,41,.82));
+            box-shadow: 0 0 13px rgba(32,207,255,.12);
+        }
+        .ct-side-link.active .ct-side-icon {
+            border-color: #20cfff;
+            background: #0b3040;
+            box-shadow: 0 0 10px rgba(32,207,255,.25);
+        }
+        html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+        @media (min-width: 1150px) {
+            .container { margin-left: 215px; width: calc(95% - 20px); max-width: 1450px; }
+        }
+        @media (max-width: 1149px) {
+            .ct-sidebar {
+                left: 10px;
+                right: 10px;
+                top: auto;
+                bottom: 12px;
+                transform: none;
+                width: auto;
+                padding: 7px;
+                border-radius: 14px;
             }
-            .transaction-type-filter,
-            .transaction-search-clear {
-                width: 100%;
+            .ct-sidebar-title { display:none; }
+            .ct-sidebar-nav {
+                flex-direction: row;
+                max-height: none;
+                overflow-x: auto;
+                overflow-y: hidden;
+                gap: 5px;
             }
+            .ct-side-link { width: auto; min-width: 96px; justify-content: center; white-space: nowrap; }
         }
 
 </style>
@@ -2057,27 +1995,27 @@
 
 <body>
 
+<nav class="ct-sidebar" aria-label="ChainTrace sections">
+    <div class="ct-sidebar-title">ChainTrace Navigation</div>
+    <div class="ct-sidebar-nav">
+        <button class="ct-side-link active" data-target="wallet-investigation"><span class="ct-side-icon">⌕</span>Investigation</button>
+        <button class="ct-side-link" data-target="overview"><span class="ct-side-icon">▣</span>Overview</button>
+        <button class="ct-side-link" data-target="vasp-attribution"><span class="ct-side-icon">$</span>VASP</button>
+        <button class="ct-side-link" data-target="complaint-cross-reference"><span class="ct-side-icon">!</span>Complaints</button>
+        <button class="ct-side-link" data-target="fund-flow-graph"><span class="ct-side-icon">⌁</span>Fund Flow</button>
+        <button class="ct-side-link" data-target="insights-alerts"><span class="ct-side-icon">✦</span>Insights</button>
+        <button class="ct-side-link" data-target="fraud-typology"><span class="ct-side-icon">◇</span>Typology</button>
+        <button class="ct-side-link" data-target="recommendations"><span class="ct-side-icon">✓</span>Actions</button>
+        <button class="ct-side-link" data-target="live-track"><span class="ct-side-icon">◉</span>Live Track</button>
+        <button class="ct-side-link" data-target="evidence-preservation"><span class="ct-side-icon">⌁</span>Evidence</button>
+        <button class="ct-side-link" data-target="investigation-summary"><span class="ct-side-icon">≡</span>Summary</button>
+        <button class="ct-side-link" data-target="transactions"><span class="ct-side-icon">↔</span>Transactions</button>
+    </div>
+</nav>
+
+
 <!-- Animated blockchain transaction layer -->
 <div id="txBackground" aria-hidden="true"></div>
-
-
-    <!-- ===== FIXED LEFT NAVIGATION ===== -->
-    <nav class="chaintrace-nav" id="chaintraceNav" aria-label="ChainTrace Navigation">
-        <div class="chaintrace-nav-title">ChainTrace Navigation</div>
-        <button type="button" data-target="investigationSection" class="active"><span class="nav-icon">⌕</span><span class="nav-label">Investigation</span></button>
-        <button type="button" data-target="overviewSection"><span class="nav-icon">▣</span><span class="nav-label">Overview</span></button>
-        <button type="button" data-target="vaspSection"><span class="nav-icon">$</span><span class="nav-label">VASP</span></button>
-        <button type="button" data-target="complaintsSection"><span class="nav-icon">!</span><span class="nav-label">Complaints</span></button>
-        <button type="button" data-target="fundFlowSection"><span class="nav-icon">→</span><span class="nav-label">Fund Flow</span></button>
-        <button type="button" data-target="insightsSection"><span class="nav-icon">✦</span><span class="nav-label">Insights</span></button>
-        <button type="button" data-target="typologySection"><span class="nav-icon">◇</span><span class="nav-label">Typology</span></button>
-        <button type="button" data-target="actionsSection"><span class="nav-icon">✓</span><span class="nav-label">Actions</span></button>
-        <button type="button" data-target="liveTrackSection"><span class="nav-icon">◉</span><span class="nav-label">Live Track</span></button>
-        <button type="button" data-target="evidenceSection"><span class="nav-icon">⌁</span><span class="nav-label">Evidence</span></button>
-        <button type="button" data-target="summarySection"><span class="nav-icon">≡</span><span class="nav-label">Summary</span></button>
-        <button type="button" data-target="transactionsSection"><span class="nav-icon">⇄</span><span class="nav-label">Transactions</span></button>
-    </nav>
-
 
 <div class="container">
 
@@ -2100,7 +2038,7 @@
          WALLET INVESTIGATION
     ====================================================== -->
 
-    <div class="panel" id="investigationSection" class="panel nav-target">
+    <div id="wallet-investigation" class="panel">
 
         <div class="panel-title">
 
@@ -2137,15 +2075,16 @@
                     BNB Chain / BEP-20
                 </option>
 
-                <option value="solana-usdt">
-                    Solana / SPL USDT
+                <option value="solana-usdt" disabled>
+                    Solana / SPL USDT (Coming Soon)
                 </option>
 
                 <option value="tron-usdt">
                     USDT / TRC-20
                 </option>
             </select>
-<button
+
+            <button
                 id="analyzeBtn"
                 onclick="analyzeWallet()"
             >
@@ -2169,7 +2108,7 @@
          OVERVIEW
     ====================================================== -->
 
-    <div class="panel" id="overviewSection" class="panel nav-target">
+    <div id="overview" class="panel">
 
         <div class="panel-title">
 
@@ -2196,6 +2135,21 @@
 
                 <div
                     id="riskScore"
+                    class="card-value"
+                >
+                    —
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <div class="card-label">
+                    TRX Balance
+                </div>
+
+                <div
+                    id="trxBalance"
                     class="card-value"
                 >
                     —
@@ -2259,7 +2213,7 @@
          VASP
     ====================================================== -->
 
-    <div class="panel" id="vaspSection" class="panel nav-target">
+    <div id="vasp-attribution" class="panel">
 
         <div class="panel-title">
 
@@ -2338,7 +2292,7 @@
          COMPLAINT
     ====================================================== -->
 
-    <div class="panel" id="complaintsSection" class="panel nav-target">
+    <div id="complaint-cross-reference" class="panel">
 
         <div class="panel-title">
 
@@ -2370,7 +2324,7 @@
          GRAPH
     ====================================================== -->
 
-    <div class="panel" id="fundFlowSection" class="panel nav-target">
+    <div id="fund-flow-graph" class="panel">
 
         <div class="panel-title">
 
@@ -2402,7 +2356,7 @@
 
     <div class="grid-2">
 
-        <div id="insightsSection" class="panel nav-target">
+        <div id="insights-alerts" class="panel">
 
             <div class="panel-title">
 
@@ -2457,7 +2411,7 @@
          FRAUD TYPOLOGY
     ====================================================== -->
 
-    <div class="panel" id="typologySection" class="panel nav-target">
+    <div id="fraud-typology" class="panel">
 
         <div class="panel-title">
 
@@ -2486,7 +2440,7 @@
          RECOMMENDATIONS
     ====================================================== -->
 
-    <div class="panel" id="actionsSection" class="panel nav-target">
+    <div id="recommendations" class="panel">
 
         <div class="panel-title">
 
@@ -2516,7 +2470,7 @@
          LIVE TRACK — 24 HOURS
     ====================================================== -->
 
-    <div class="panel" id="liveTrackSection" class="panel nav-target">
+    <div id="live-track" class="panel">
 
         <div class="panel-title">
             <h3>📡 Live Track — 24 Hours</h3>
@@ -2561,7 +2515,7 @@
          EVIDENCE
     ====================================================== -->
 
-    <div class="panel" id="evidenceSection" class="panel nav-target">
+    <div id="evidence-preservation" class="panel">
 
         <div class="panel-title">
 
@@ -2612,7 +2566,7 @@
          SUMMARY
     ====================================================== -->
 
-    <div class="panel" id="summarySection" class="panel nav-target">
+    <div id="investigation-summary" class="panel">
 
         <div class="panel-title">
 
@@ -2656,7 +2610,7 @@
          TRANSACTIONS
     ====================================================== -->
 
-    <div class="panel" id="transactionsSection" class="panel nav-target">
+    <div id="transactions" class="panel">
 
         <div class="panel-title">
 
@@ -2673,45 +2627,87 @@
 
         </div>
 
-        <div class="transaction-controls">
+        <div class="transaction-search-bar">
             <input
                 id="transactionSearchInput"
                 class="transaction-search-input"
                 type="search"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="Search full address, TX hash, amount, type..."
+                placeholder="Search transaction address, TX hash, amount, type..."
                 aria-label="Search transactions"
             >
-            <select id="transactionTypeFilter" class="transaction-type-filter" aria-label="Transaction type filter">
-                <option value="ALL">All Types</option>
-                <option value="SENT">Sent</option>
-                <option value="RECEIVED">Received</option>
-            </select>
+
+            <div
+                class="transaction-type-filter"
+            >
+                <label
+                    class="transaction-type-label"
+                    for="transactionTypeSelect"
+                >
+                    TYPE
+                </label>
+
+                <select
+                    id="transactionTypeSelect"
+                    class="transaction-type-select"
+                    aria-label="Filter transactions by type"
+                >
+                    <option value="ALL">All Types</option>
+                    <option value="SENT">Sent</option>
+                    <option value="RECEIVED">Received</option>
+                </select>
+            </div>
+
             <button
                 id="transactionSearchClear"
                 class="transaction-search-clear secondary"
                 type="button"
-            >CLEAR</button>
-            <div id="transactionSearchMeta" class="transaction-search-meta" style="grid-column:1 / -1; text-align:left;">
+            >
+                CLEAR
+            </button>
+
+            <div
+                id="transactionSearchMeta"
+                class="transaction-search-meta"
+                style="grid-column: 1 / -1; text-align:left;"
+            >
                 Search across all loaded transactions
             </div>
         </div>
 
-        <div class="transaction-table-wrap">
+        <div class="table-wrap">
 
-            <table class="transaction-table">
+            <table>
 
                 <thead>
 
                     <tr>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th>From Address</th>
-                        <th>To Address</th>
-                        <th>Date &amp; Time (IST)</th>
-                        <th>TX Hash</th>
-                        <th>Action</th>
+
+                        <th>
+                            Type
+                        </th>
+
+                        <th>
+                            Amount
+                        </th>
+
+                        <th>
+                            From Address
+                        </th>
+
+                        <th>
+                            To Address
+                        </th>
+
+                        <th>
+                            Date &amp; Time
+                        </th>
+
+                        <th>
+                            Trace
+                        </th>
+
                     </tr>
 
                 </thead>
@@ -2722,7 +2718,7 @@
 
                     <tr>
 
-                        <td colspan="7">
+                        <td colspan="6">
                             No transactions loaded.
                         </td>
 
@@ -2760,9 +2756,14 @@ let liveTrackLastFutureHashes = new Set();
    API
 ========================================================= */
 
+let transactionTypeFilter = "ALL";
+
+
 const API_BASE_URL =
     window.CHAINTRACE_API_URL ||
-    "https://chaintracker-u5hk.onrender.com";
+    (window.location.protocol === "file:"
+        ? "http://localhost:3000"
+        : "");
 
 
 /* =========================================================
@@ -2783,17 +2784,8 @@ document.addEventListener(
             document.getElementById("transactionSearchClear");
 
         if (transactionSearchInput) {
-            transactionSearchInput.addEventListener("input", () => {
-                applyTransactionFilters();
-            });
-        }
-
-        const transactionTypeFilter =
-            document.getElementById("transactionTypeFilter");
-
-        if (transactionTypeFilter) {
-            transactionTypeFilter.addEventListener("change", () => {
-                applyTransactionFilters();
+            transactionSearchInput.addEventListener("input", event => {
+                applyTransactionSearch(event.target.value);
             });
         }
 
@@ -2803,10 +2795,18 @@ document.addEventListener(
                     transactionSearchInput.value = "";
                     transactionSearchInput.focus();
                 }
-                if (transactionTypeFilter) {
-                    transactionTypeFilter.value = "ALL";
-                }
-                applyTransactionFilters();
+                transactionTypeFilter = "ALL";
+                updateTransactionTypeButtons();
+                applyTransactionSearch("");
+            });
+        }
+
+        const transactionTypeSelect =
+            document.getElementById("transactionTypeSelect");
+
+        if (transactionTypeSelect) {
+            transactionTypeSelect.addEventListener("change", event => {
+                setTransactionTypeFilter(event.target.value);
             });
         }
 
@@ -3082,7 +3082,7 @@ function updateInvestigationNetworkLabel() {
         "tron-usdt": "TRON / TRC-20",
         "ethereum-usdt": "Ethereum / ERC-20",
         "bnb-usdt": "BNB Chain / BEP-20",
-        "solana-usdt": "Solana / SPL USDT"
+        "solana-usdt": "Solana / SPL USDT (Coming Soon)"
     };
 
     const placeholders = {
@@ -3202,14 +3202,17 @@ if (!wallet) {
     status.className =
         "status";
 
-    status.innerText =
-        `Analyzing ${blockchain === "tron"
-            ? "TRON"
+    const networkLabel =
+        blockchain === "tron"
+            ? "TRON / TRC-20"
             : blockchain === "ethereum"
-                ? "Ethereum"
+                ? "Ethereum / ERC-20"
                 : blockchain === "bnb"
-                    ? "BNB Chain"
-                    : "Solana"} wallet — ${token}...`;
+                    ? "BNB Chain / BEP-20"
+                    : "Solana / SPL";
+
+    status.innerText =
+        `Analyzing ${networkLabel} wallet — ${token}...`;
 
     button.disabled =
         true;
@@ -3243,6 +3246,15 @@ if (!wallet) {
 
         latestAnalysis =
             data;
+
+        if (blockchain === "tron") {
+            loadTronAccountBalance(wallet);
+        } else {
+            const balanceElement = document.getElementById("trxBalance");
+            if (balanceElement) {
+                balanceElement.innerText = "—";
+            }
+        }
 
         updateTokenUI(data.token || token);
 
@@ -3374,6 +3386,56 @@ if (!wallet) {
             "ANALYZE";
     }
 
+}
+
+
+/* =========================================================
+   TRON ACCOUNT BALANCE
+========================================================= */
+
+async function loadTronAccountBalance(wallet) {
+    const balanceElement = document.getElementById("trxBalance");
+    if (!balanceElement || !wallet) return;
+
+    if (!String(wallet).startsWith("T")) {
+        balanceElement.innerText = "—";
+        return;
+    }
+
+    balanceElement.innerText = "Loading...";
+
+    try {
+        const data = await fetchJson(
+            API_BASE_URL + "/api/tron/account",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    address: wallet
+                })
+            }
+        );
+
+        const balance = Number(
+            data?.account?.balance_trx ?? 0
+        );
+
+        latestAnalysis = {
+            ...(latestAnalysis || {}),
+            tronAccount: data.account || null,
+            trxBalance: Number.isFinite(balance) ? balance : 0
+        };
+
+        balanceElement.innerText =
+            `${Number.isFinite(balance) ? balance.toFixed(6) : "0.000000"} TRX`;
+
+    } catch (error) {
+        console.warn("TRON account balance unavailable:", error);
+        balanceElement.innerText = "—";
+    }
 }
 
 
@@ -4480,7 +4542,6 @@ ${
    TRANSACTIONS
 ========================================================= */
 
-
 function getTransactionSearchText(tx) {
     return [
         tx?.type,
@@ -4493,8 +4554,6 @@ function getTransactionSearchText(tx) {
         tx?.txHash,
         tx?.transactionHash,
         tx?.timestamp,
-        tx?.time,
-        tx?.blockTimestamp,
         tx?.blockNumber
     ]
         .filter(value => value !== undefined && value !== null)
@@ -4502,84 +4561,152 @@ function getTransactionSearchText(tx) {
         .toLowerCase();
 }
 
-function getTransactionDirection(tx) {
-    const wallet = String(latestAnalysis?.wallet || "").toLowerCase();
-    const from = String(tx?.from || "").toLowerCase();
-    const to = String(tx?.to || "").toLowerCase();
-    const raw = String(tx?.type || tx?.direction || "").toLowerCase();
-
-    if (raw.includes("sent") || raw.includes("out") || raw.includes("withdraw") || (wallet && from === wallet)) {
-        return "SENT";
-    }
-    if (raw.includes("received") || raw.includes("in") || raw.includes("deposit") || (wallet && to === wallet)) {
-        return "RECEIVED";
-    }
-    return raw ? raw.toUpperCase() : "OTHER";
-}
-
-function formatTransactionDateTime(tx) {
-    const raw = tx?.timestamp ?? tx?.time ?? tx?.blockTimestamp ?? tx?.date ?? tx?.createdAt;
-    if (raw === undefined || raw === null || raw === "") return "—";
-
-    let value = raw;
-    if (typeof value === "number" || /^\d+$/.test(String(value))) {
-        const numeric = Number(value);
-        if (numeric < 100000000000) value = numeric * 1000;
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return escapeHtml(String(raw));
-
-    return date.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false
-    }) + " IST";
-}
-
-function updateTransactionSearchMeta(visibleCount, totalCount, query = "", filter = "ALL") {
+function updateTransactionSearchMeta(visibleCount, totalCount, query = "", typeFilter = "ALL") {
     const meta = document.getElementById("transactionSearchMeta");
     if (!meta) return;
 
     if (!totalCount) {
-        meta.textContent = "No transactions loaded";
+        meta.textContent = "Search across all loaded transactions";
         return;
     }
 
-    const filterText = filter !== "ALL" ? ` • ${filter}` : "";
-    if (!query && filter === "ALL") {
-        meta.innerHTML = `<strong>${totalCount.toLocaleString()}</strong> transactions loaded • showing all`;
+    const typeLabel = typeFilter === "ALL"
+        ? ""
+        : ` • <strong>${escapeHtml(typeFilter)}</strong> only`;
+
+    if (!query) {
+        const visible = Math.min(visibleCount, MAX_VISIBLE_TRANSACTION_ROWS);
+        meta.innerHTML = visibleCount > MAX_VISIBLE_TRANSACTION_ROWS
+            ? `<strong>${totalCount.toLocaleString()}</strong> total transactions • showing first <strong>${visible.toLocaleString()}</strong>${typeLabel}`
+            : `<strong>${visibleCount.toLocaleString()}</strong> transactions loaded${typeLabel}`;
         return;
     }
 
-    meta.innerHTML = `<strong>${visibleCount.toLocaleString()}</strong> match${visibleCount === 1 ? "" : "es"} from <strong>${totalCount.toLocaleString()}</strong>${filterText}${query ? ` for <strong>${escapeHtml(query)}</strong>` : ""}`;
+    meta.innerHTML = `<strong>${visibleCount.toLocaleString()}</strong> match${visibleCount === 1 ? "" : "es"} for <strong>${escapeHtml(query)}</strong>${typeLabel}`;
 }
 
-function applyTransactionFilters() {
-    const searchInput = document.getElementById("transactionSearchInput");
-    const typeFilter = document.getElementById("transactionTypeFilter");
-    const query = String(searchInput?.value || "").trim().toLowerCase();
-    const filter = String(typeFilter?.value || "ALL").toUpperCase();
+function getNormalizedTransactionType(tx) {
+    const raw = String(
+        tx?.type ||
+        tx?.direction ||
+        ""
+    ).trim().toLowerCase();
 
-    const filtered = allTransactionRows.filter(tx => {
-        const matchesType = filter === "ALL" || getTransactionDirection(tx) === filter;
-        const matchesSearch = !query || getTransactionSearchText(tx).includes(query);
-        return matchesType && matchesSearch;
-    });
+    if (raw.includes("send") || raw === "out" || raw === "outgoing") {
+        return "SENT";
+    }
+
+    if (raw.includes("receiv") || raw === "in" || raw === "incoming") {
+        return "RECEIVED";
+    }
+
+    const wallet = String(latestAnalysis?.wallet || "").toLowerCase();
+    const from = String(tx?.from || tx?.sender || "").toLowerCase();
+    const to = String(tx?.to || tx?.receiver || "").toLowerCase();
+
+    if (wallet && from === wallet) return "SENT";
+    if (wallet && to === wallet) return "RECEIVED";
+
+    return "UNKNOWN";
+}
+
+function updateTransactionTypeButtons() {
+    const select = document.getElementById("transactionTypeSelect");
+    if (select) {
+        select.value = transactionTypeFilter;
+    }
+}
+
+function setTransactionTypeFilter(type) {
+    const next = String(type || "").toUpperCase();
+
+    if (transactionTypeFilter === next) {
+        transactionTypeFilter = "ALL";
+    } else {
+        transactionTypeFilter = next === "SENT" || next === "RECEIVED"
+            ? next
+            : "ALL";
+    }
+
+    updateTransactionTypeButtons();
+
+    const searchInput = document.getElementById("transactionSearchInput");
+    applyTransactionSearch(searchInput?.value || "");
+}
+
+function applyTransactionSearch(query = "") {
+    const normalizedQuery = String(query || "").trim().toLowerCase();
+
+    let filtered = allTransactionRows;
+
+    if (transactionTypeFilter !== "ALL") {
+        filtered = filtered.filter(tx =>
+            getNormalizedTransactionType(tx) === transactionTypeFilter
+        );
+    }
+
+    if (normalizedQuery) {
+        filtered = filtered.filter(tx =>
+            getTransactionSearchText(tx).includes(normalizedQuery)
+        );
+    }
 
     updateTransactionSearchMeta(
         filtered.length,
         allTransactionRows.length,
-        query,
-        filter
+        normalizedQuery,
+        transactionTypeFilter
     );
 
     renderTransactionRows(filtered);
+}
+
+function formatTransactionDateTime(tx) {
+    const raw =
+        tx?.timestamp ??
+        tx?.block_timestamp ??
+        tx?.timeStamp ??
+        tx?.datetime ??
+        tx?.date ??
+        tx?.createdAt ??
+        tx?.created_at ??
+        null;
+
+    let date = null;
+
+    if (typeof raw === "number" || /^\d+(?:\.\d+)?$/.test(String(raw || ""))) {
+        const numeric = Number(raw);
+        if (Number.isFinite(numeric)) {
+            date = new Date(numeric < 100000000000 ? numeric * 1000 : numeric);
+        }
+    } else if (raw) {
+        const parsed = new Date(String(raw));
+        if (!Number.isNaN(parsed.getTime())) {
+            date = parsed;
+        }
+    }
+
+    if (!date || Number.isNaN(date.getTime())) {
+        return { date: "—", time: "No timestamp" };
+    }
+
+    const datePart = date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+    });
+
+    const timePart = date.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+    });
+
+    return {
+        date: datePart,
+        time: timePart
+    };
 }
 
 function renderTransactionRows(transactions) {
@@ -4591,44 +4718,62 @@ function renderTransactionRows(transactions) {
     if (!transactions || transactions.length === 0) {
         container.innerHTML = `
             <tr>
-                <td colspan="7" style="color:#8297a3; padding:16px;">
+                <td colspan="6" style="color:#8297a3; padding:12px;">
                     No transactions found.
                 </td>
             </tr>
         `;
+        updateTransactionSearchMeta(0, allTransactionRows.length, "", transactionTypeFilter);
         return;
     }
 
-    // Intentionally render the complete returned transaction set.
-    // No frontend row cap is applied.
-    transactions.forEach(tx => {
+    const rows = transactions.slice(0, MAX_VISIBLE_TRANSACTION_ROWS);
+
+    rows.forEach(tx => {
         const row = document.createElement("tr");
-        const direction = getTransactionDirection(tx);
-        const amount = tx?.amount ?? tx?.value ?? 0;
-        const from = String(tx?.from || "—");
-        const to = String(tx?.to || "—");
-        const hash = String(tx?.hash || tx?.txHash || tx?.transactionHash || tx?.transaction_id || "—");
-        const explorer = tx?.explorerUrl || tx?.explorer_url || "";
-        const traceWallet = direction === "SENT" ? to : from;
-        const pillClass = direction === "SENT" ? "sent" : direction === "RECEIVED" ? "received" : "other";
+        const normalizedType = getNormalizedTransactionType(tx);
+        const type = normalizedType === "SENT"
+            ? "Sent"
+            : normalizedType === "RECEIVED"
+                ? "Received"
+                : String(tx.type || tx.direction || "—");
+        const typeClass = normalizedType === "SENT"
+            ? "sent"
+            : normalizedType === "RECEIVED"
+                ? "received"
+                : "";
+        const amount = tx.amount ?? tx.value ?? 0;
+        const from = String(tx.from || tx.sender || "—");
+        const to = String(tx.to || tx.receiver || "—");
+        const explorer = tx.explorerUrl || tx.explorer_url || "";
+        const txDateTime = formatTransactionDateTime(tx);
+
+        const traceWallet = String(
+            normalizedType === "SENT" ||
+            String(tx.from || "").toLowerCase() === String(latestAnalysis?.wallet || "").toLowerCase()
+                ? to
+                : from
+        );
 
         row.innerHTML = `
             <td>
-                <span class="tx-type-pill ${pillClass}">
-                    ${escapeHtml(direction)}
+                <span class="transaction-type-pill ${typeClass}">
+                    ${escapeHtml(type)}
                 </span>
             </td>
-            <td class="tx-amount">${escapeHtml(String(amount))} USDT</td>
-            <td class="tx-address" title="${escapeHtml(from)}">${escapeHtml(from)}</td>
-            <td class="tx-address" title="${escapeHtml(to)}">${escapeHtml(to)}</td>
-            <td class="tx-date">${formatTransactionDateTime(tx)}</td>
-            <td class="tx-hash" title="${escapeHtml(hash)}">${escapeHtml(hash)}</td>
+            <td>${escapeHtml(String(amount))} USDT</td>
+            <td class="tx-address-cell" title="${escapeHtml(from)}">${escapeHtml(from)}</td>
+            <td class="tx-address-cell" title="${escapeHtml(to)}">${escapeHtml(to)}</td>
+            <td class="tx-time-cell">
+                <span class="tx-time-date">${escapeHtml(txDateTime.date)}</span>
+                <span class="tx-time-zone">${escapeHtml(txDateTime.time)} IST</span>
+            </td>
             <td class="trace-cell">
                 <button
                     type="button"
-                    class="tx-trace-btn"
+                    class="trace-btn"
                     data-trace-wallet="${escapeHtml(traceWallet)}"
-                    data-tx-hash="${escapeHtml(hash)}"
+                    data-tx-hash="${escapeHtml(String(tx.hash || tx.transaction_id || ""))}"
                     data-explorer="${escapeHtml(explorer)}"
                 >TRACE</button>
             </td>
@@ -4636,32 +4781,111 @@ function renderTransactionRows(transactions) {
         container.appendChild(row);
     });
 
-    container.querySelectorAll(".tx-trace-btn").forEach(btn => {
+    container.querySelectorAll(".trace-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             const wallet = btn.dataset.traceWallet || "";
             traceTransactionWallet(wallet);
         });
     });
+
+    if (transactions.length > MAX_VISIBLE_TRANSACTION_ROWS) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td colspan="6" style="color:#8297a3; padding:12px;">
+                Showing first <strong>${MAX_VISIBLE_TRANSACTION_ROWS.toLocaleString()}</strong>
+                of <strong>${transactions.length.toLocaleString()}</strong> matching transactions.
+            </td>
+        `;
+        container.appendChild(row);
+    }
+}
+
+async function traceTransactionWallet(wallet) {
+    if (!wallet) {
+        alert("Trace wallet address not available.");
+        return;
+    }
+
+    const blockchain =
+        latestAnalysis?.blockchain ||
+        document.getElementById("blockchainInput")?.value?.split("-")[0] ||
+        "tron";
+    const token = latestAnalysis?.token || "USDT";
+    const status = document.getElementById("status");
+
+    try {
+        if (status) {
+            status.className = "status";
+            status.innerText = `Tracing ${shortenAddress(wallet)}...`;
+        }
+
+        const data = await fetchJson(
+            API_BASE_URL + "/api/trace",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    wallet,
+                    blockchain,
+                    token
+                })
+            }
+        );
+
+        if (!data.success) {
+            throw new Error(data.error || "Trace failed.");
+        }
+
+        latestAnalysis = {
+            ...latestAnalysis,
+            wallet: data.wallet || wallet,
+            blockchain: data.blockchain || blockchain,
+            token: data.token || token,
+            trace: data.trace,
+            graph: data.graph
+        };
+
+        if (document.getElementById("walletInput")) {
+            document.getElementById("walletInput").value =
+                data.wallet || wallet;
+        }
+
+        renderGraph(data.graph);
+
+        if (status) {
+            status.className = "status success";
+            status.innerText =
+                `Trace completed — ${shortenAddress(data.wallet || wallet)}.`;
+        }
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+        if (status) {
+            status.className = "status error";
+            status.innerText = `Trace failed: ${error.message}`;
+        } else {
+            alert(`Trace failed: ${error.message}`);
+        }
+    }
 }
 
 function renderTransactions(transactions) {
     allTransactionRows = Array.isArray(transactions) ? transactions : [];
+    transactionTypeFilter = "ALL";
+    updateTransactionTypeButtons();
 
     const searchInput = document.getElementById("transactionSearchInput");
-    const typeFilter = document.getElementById("transactionTypeFilter");
-
     if (searchInput) searchInput.value = "";
-    if (typeFilter) typeFilter.value = "ALL";
 
     updateTransactionSearchMeta(
         allTransactionRows.length,
         allTransactionRows.length,
-        "",
-        "ALL"
+        ""
     );
 
     renderTransactionRows(allTransactionRows);
 }
+
 
 
 /* =========================================================
@@ -5350,22 +5574,37 @@ function updateLiveTrackCountdown(serverRemainingMs = null) {
     const el = document.getElementById("liveTimeRemaining");
     if (!el) return;
 
-    // Keep one absolute end-time in the browser so the display changes every second.
-    if (Number.isFinite(Number(serverRemainingMs))) {
-        liveTrackEndAt = Date.now() + Math.max(0, Number(serverRemainingMs));
-    } else if (!liveTrackEndAt && liveTrackStartedAt) {
-        liveTrackEndAt = liveTrackStartedAt + 24 * 60 * 60 * 1000;
+    /*
+     * IMPORTANT:
+     * Do NOT reset liveTrackEndAt on every 15-second API poll.
+     * If we keep doing that, the countdown can appear stuck at 23:59:59.
+     * The browser keeps one fixed end timestamp and only the countdown
+     * display is updated every second.
+     */
+    if (!liveTrackEndAt && liveTrackStartedAt) {
+        liveTrackEndAt = liveTrackStartedAt + (24 * 60 * 60 * 1000);
     }
 
-    if (!liveTrackEndAt) return;
+    if (!liveTrackEndAt && Number.isFinite(Number(serverRemainingMs))) {
+        liveTrackEndAt = Date.now() + Math.max(0, Number(serverRemainingMs));
+    }
+
+    if (!liveTrackEndAt) {
+        el.textContent = "00:00:00";
+        return;
+    }
 
     const remaining = Math.max(0, liveTrackEndAt - Date.now());
-    const h = Math.floor(remaining / 3600000);
-    const m = Math.floor((remaining % 3600000) / 60000);
-    const s = Math.floor((remaining % 60000) / 1000);
+    const totalSeconds = Math.ceil(remaining / 1000);
+
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
 
     el.textContent =
-        `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+        `${String(h).padStart(2, "0")}:` +
+        `${String(m).padStart(2, "0")}:` +
+        `${String(s).padStart(2, "0")}`;
 
     if (remaining <= 0) {
         clearInterval(liveTrackCountdownTimer);
@@ -5373,6 +5612,18 @@ function updateLiveTrackCountdown(serverRemainingMs = null) {
         liveTrackEndAt = null;
         stopLiveTrack(true);
     }
+}
+
+function startLiveTrackCountdown() {
+    clearInterval(liveTrackCountdownTimer);
+
+    // Paint immediately.
+    updateLiveTrackCountdown();
+
+    // Then update exactly once every second.
+    liveTrackCountdownTimer = setInterval(() => {
+        updateLiveTrackCountdown();
+    }, 1000);
 }
 
 function renderLiveTrackTransactions(data) {
@@ -5445,7 +5696,12 @@ async function pollLiveTrack() {
                     ? new Date(data.trackingStartedAt).getTime()
                     : liveTrackStartedAt;
 
-            updateLiveTrackCountdown(data.timeRemainingMs);
+            // Keep the browser countdown authoritative.
+            // Do not reset the end timestamp on every polling request.
+            if (!liveTrackEndAt && Number.isFinite(Number(data.timeRemainingMs))) {
+                liveTrackEndAt = Date.now() + Math.max(0, Number(data.timeRemainingMs));
+            }
+            updateLiveTrackCountdown();
 
             const badge = document.getElementById("liveTrackBadge");
             if (badge) {
@@ -5510,13 +5766,7 @@ async function startLiveTrack() {
             15000
         );
 
-        clearInterval(liveTrackCountdownTimer);
-        liveTrackCountdownTimer = setInterval(
-            updateLiveTrackCountdown,
-            1000
-        );
-
-        updateLiveTrackCountdown();
+        startLiveTrackCountdown();
 
         await pollLiveTrack();
     } catch (error) {
@@ -6168,55 +6418,28 @@ function escapeHtml(
     });
 
 
-/* =========================================================
-   FIXED LEFT NAVIGATION
-========================================================= */
-function initChainTraceNavigation() {
-    const nav = document.getElementById("chaintraceNav");
-    if (!nav) return;
-
-    const buttons = Array.from(nav.querySelectorAll("button[data-target]"));
-    const targets = buttons
-        .map(btn => document.getElementById(btn.dataset.target))
-        .filter(Boolean);
-
-    buttons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const target = document.getElementById(btn.dataset.target);
+/* ===== UNIQUE SIDEBAR NAVIGATION ===== */
+(function initChainTraceSidebar(){
+    const links = Array.from(document.querySelectorAll('.ct-side-link'));
+    links.forEach(link => {
+        link.addEventListener('click', () => {
+            const target = document.getElementById(link.dataset.target);
             if (!target) return;
-            target.scrollIntoView({
-                behavior: "smooth",
-                block: "start"
-            });
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            links.forEach(item => item.classList.remove('active'));
+            link.classList.add('active');
         });
     });
-
-    const setActive = id => {
-        buttons.forEach(btn => {
-            btn.classList.toggle("active", btn.dataset.target === id);
-        });
-    };
-
-    if ("IntersectionObserver" in window) {
+    const targets = links.map(link => document.getElementById(link.dataset.target)).filter(Boolean);
+    if ('IntersectionObserver' in window) {
         const observer = new IntersectionObserver(entries => {
-            const visible = entries
-                .filter(entry => entry.isIntersecting)
-                .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-            if (visible) setActive(visible.target.id);
-        }, {
-            root: null,
-            rootMargin: "-18% 0px -62% 0px",
-            threshold: [0.05, 0.15, 0.35, 0.6]
-        });
-
+            const visible = entries.filter(entry => entry.isIntersecting).sort((a,b) => b.intersectionRatio-a.intersectionRatio)[0];
+            if (!visible) return;
+            links.forEach(link => link.classList.toggle('active', link.dataset.target === visible.target.id));
+        }, { rootMargin: '-15% 0px -65% 0px', threshold: [0.05, 0.2, 0.5] });
         targets.forEach(target => observer.observe(target));
     }
-
-    setActive("investigationSection");
-}
-
-document.addEventListener("DOMContentLoaded", initChainTraceNavigation);
+})();
 
 </script>
 
