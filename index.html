@@ -14,6 +14,15 @@
             box-sizing: border-box;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 24px;
+        }
+
         body {
             margin: 0;
             font-family:
@@ -26,12 +35,16 @@
 
             color:
                 #e7f1f5;
+
+            min-height: 100vh;
         }
 
         .container {
-            width: 95%;
-            max-width: 1450px;
-            margin: 25px auto;
+            width: calc(100% - 32px);
+            max-width: 1400px;
+            margin: 20px auto 90px auto;
+            box-sizing: border-box;
+            min-width: 0;
         }
 
         .header {
@@ -45,6 +58,8 @@
                 #0b171e;
 
             margin-bottom: 18px;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         .header h1 {
@@ -90,6 +105,11 @@
 
             margin-bottom:
                 18px;
+
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .panel-title {
@@ -154,39 +174,119 @@
                 #ff7777 !important;
         }
 
+        /* ===== WALLET INVESTIGATION RESPONSIVE FORM GRID ===== */
         .form-grid {
-            display:
-                grid;
+            display: grid;
+            grid-template-columns: minmax(0, 2.5fr) minmax(0, 1.4fr) minmax(0, 180px) minmax(110px, auto);
+            gap: 12px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            align-items: stretch;
+        }
 
-            grid-template-columns:
-                2fr 1fr 1fr auto;
+        .form-grid>* {
+            min-width: 0;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
+        }
 
-            gap:
-                12px;
+        @media (max-width: 992px) {
+            .form-grid {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .form-grid {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 10px;
+            }
+        }
+
+        /* ===== DATE FILTER PICKER ===== */
+        .date-filter-wrap {
+            display: flex;
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            height: 44px;
+        }
+
+        .date-filter-label {
+            font-size: 9px;
+            color: #62b9ff;
+            letter-spacing: .6px;
+            text-transform: uppercase;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        #dateFilter {
+            width: 100%;
+            height: 100%;
+            padding: 10px 32px 10px 10px;
+            border-radius: 7px;
+            border: 1px solid #27434f;
+            background: #071016;
+            color: #e7f1f5;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+            color-scheme: dark;
+            box-sizing: border-box;
+            min-width: 0;
+        }
+
+        #dateFilter:focus {
+            border-color: #62b9ff;
+        }
+
+        #dateFilter::-webkit-calendar-picker-indicator {
+            filter: invert(0.7) sepia(1) saturate(3) hue-rotate(180deg);
+            cursor: pointer;
+        }
+
+        .date-filter-clear {
+            display: none;
+            position: absolute;
+            right: 28px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #62b9ff;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            min-height: 20px;
+            line-height: 20px;
+            text-align: center;
         }
 
         input,
         select,
         button {
+            box-sizing: border-box;
             width: 100%;
-
-            padding:
-                12px;
-
-            border-radius:
-                7px;
-
-            border:
-                1px solid #27434f;
-
-            background:
-                #071016;
-
-            color:
-                #fff;
-
-            outline:
-                none;
+            max-width: 100%;
+            min-width: 0;
+            padding: 12px;
+            border-radius: 7px;
+            border: 1px solid #27434f;
+            background: #071016;
+            color: #fff;
+            outline: none;
+            font-size: 13px;
+            min-height: 44px;
+            line-height: 1.2;
         }
 
         input:focus,
@@ -207,6 +307,28 @@
 
             border:
                 none;
+        }
+
+        #analyzeBtn {
+            background: #1269a8;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+            min-height: 44px;
+            padding: 0 20px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: .5px;
+            transition: background .15s ease;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        #analyzeBtn:hover:not(:disabled) {
+            background: #1684cf;
         }
 
         button:hover {
@@ -1640,7 +1762,6 @@
 
         @media (max-width: 900px) {
 
-            .form-grid,
             .cards,
             .vasp-box,
             .grid-2,
@@ -2012,9 +2133,9 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            max-height: 72vh;
-            overflow-y: auto;
-            scrollbar-width: thin;
+            max-height: none;
+            overflow-y: visible;
+            scrollbar-width: none;
         }
 
         .ct-side-link {
@@ -2069,13 +2190,20 @@
 
         @media (min-width: 1150px) {
             .container {
-                margin-left: 215px;
-                width: calc(95% - 20px);
-                max-width: 1450px;
+                margin-left: 216px;
+                margin-right: 24px;
+                margin-top: 24px;
+                margin-bottom: 30px;
+                width: calc(100% - 240px);
+                max-width: 1400px;
             }
         }
 
         @media (max-width: 1149px) {
+            .container {
+                margin-bottom: 90px;
+            }
+
             .ct-sidebar {
                 left: 10px;
                 right: 10px;
@@ -2097,11 +2225,13 @@
                 overflow-x: auto;
                 overflow-y: hidden;
                 gap: 5px;
+                scrollbar-width: thin;
             }
 
             .ct-side-link {
                 width: auto;
                 min-width: 96px;
+                flex: 0 0 auto;
                 justify-content: center;
                 white-space: nowrap;
             }
@@ -2155,7 +2285,11 @@
                 Real-Time Cryptocurrency Fraud Attribution & Blockchain Intelligence
             </p>
 
-
+            <div class="header-status">
+                <span class="badge" id="apiStatusBadge">CHECKING API...</span>
+                <span class="badge" id="dbStatusBadge">VASP DB</span>
+                <span class="badge" id="watcherStatusBadge">WATCHERS: 0</span>
+            </div>
 
         </div>
 
@@ -2169,7 +2303,7 @@
             <div class="panel-title">
 
                 <h3>
-                    🔍 Wallet Investigation
+                    Wallet Investigation
                 </h3>
 
                 <span class="badge" id="investigationNetworkBadge">
@@ -2204,6 +2338,14 @@
                     </option>
                 </select>
 
+                <!-- Calendar date picker (UTC) -->
+                <div class="date-filter-wrap">
+                    <input id="dateFilter" type="date"
+                        title="Filter transactions by UTC date. Leave empty to show all.">
+                    <button class="date-filter-clear" id="dateFilterClear" type="button" title="Clear date"
+                        onclick="clearDateFilter()">✕</button>
+                </div>
+
                 <button id="analyzeBtn" onclick="analyzeWallet()">
 
                     ANALYZE
@@ -2227,7 +2369,7 @@
             <div class="panel-title">
 
                 <h3>
-                    📊 Investigation Overview
+                    Investigation Overview
                 </h3>
 
                 <span id="riskBadge" class="badge">
@@ -2314,7 +2456,7 @@
             <div class="panel-title">
 
                 <h3>
-                    🏦 VASP Attribution
+                    VASP Attribution
                 </h3>
 
                 <span class="badge">
@@ -2390,7 +2532,7 @@
             <div class="panel-title">
 
                 <h3>
-                    🚨 Cybercrime Complaint Cross-Reference
+                    Cybercrime Complaint Cross-Reference
                 </h3>
 
                 <span id="complaintBadge" class="badge">
@@ -2417,7 +2559,7 @@
             <div class="panel-title">
 
                 <h3>
-                    🕸️ Fund Flow Graph
+                    Fund Flow Graph
                 </h3>
 
                 <span class="badge">
@@ -2446,7 +2588,7 @@
                 <div class="panel-title">
 
                     <h3>
-                        🧠 Investigation Insights
+                        Investigation Insights
                     </h3>
 
                 </div>
@@ -2465,7 +2607,7 @@
                 <div class="panel-title">
 
                     <h3>
-                        🚨 Automated Investigation Alerts
+                        Automated Investigation Alerts
                     </h3>
 
                     <span id="alertBadge" class="badge">
@@ -2494,7 +2636,7 @@
             <div class="panel-title">
 
                 <h3>
-                    🧠 Fraud Typology
+                    Fraud Typology
                 </h3>
 
                 <span class="badge">
@@ -2521,7 +2663,7 @@
             <div class="panel-title">
 
                 <h3>
-                    📌 Investigator Recommendations
+                    Investigator Recommendations
                 </h3>
 
                 <span class="badge">
@@ -2547,7 +2689,7 @@
         <div id="live-track" class="panel">
 
             <div class="panel-title">
-                <h3>📡 Live Track — 24 Hours</h3>
+                <h3>Live Track — 24 Hours</h3>
                 <span id="liveTrackBadge" class="badge">OFF</span>
             </div>
 
@@ -2594,7 +2736,7 @@
             <div class="panel-title">
 
                 <h3>
-                    🔐 Evidence Preservation
+                    Evidence Preservation
                 </h3>
 
                 <span id="evidenceBadge" class="badge">
@@ -2635,7 +2777,7 @@
             <div class="panel-title">
 
                 <h3>
-                    📄 Investigation Summary
+                    Investigation Summary
                 </h3>
 
                 <span class="badge">
@@ -2672,7 +2814,7 @@
             <div class="panel-title">
 
                 <h3>
-                    💸 Transactions
+                    Transactions
                 </h3>
 
                 <span class="badge" id="transactionBadge">
@@ -2791,8 +2933,12 @@
 
 
             const API_BASE_URL =
-                window.CHAINTRACE_API_URL ||
-                "https://chaintracker-u5hk.onrender.com";
+                (typeof window !== "undefined" && window.CHAINTRACE_API_URL) ?
+                    window.CHAINTRACE_API_URL :
+                    (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ?
+                        (window.location.port === "3000" ? "" : "http://localhost:3000") :
+                        "https://chaintracker-u5hk.onrender.com"
+                    );
 
 
             /* =========================================================
@@ -2887,8 +3033,32 @@
                         30000
                     );
 
+                    // Wire date filter clear button visibility
+                    const dateFilterEl = document.getElementById("dateFilter");
+                    const dateFilterClearBtn = document.getElementById("dateFilterClear");
+                    if (dateFilterEl && dateFilterClearBtn) {
+                        dateFilterEl.addEventListener("change", () => {
+                            dateFilterClearBtn.style.display = dateFilterEl.value ? "block" : "none";
+                        });
+                    }
+
                 }
             );
+
+
+            /* =========================================================
+               DATE FILTER CLEAR
+            ========================================================= */
+            function clearDateFilter() {
+                const dateFilterEl = document.getElementById("dateFilter");
+                const dateFilterClearBtn = document.getElementById("dateFilterClear");
+                if (dateFilterEl) {
+                    dateFilterEl.value = "";
+                }
+                if (dateFilterClearBtn) {
+                    dateFilterClearBtn.style.display = "none";
+                }
+            }
 
 
 
@@ -3204,7 +3374,7 @@
 
                     if (!isValidTronAddress(wallet)) {
                         status.className = "status error";
-                        status.innerText = "❌ Wrong address / Does not match selected blockchain: TRON.";
+                        status.innerText = "Wrong address / Does not match selected blockchain: TRON.";
                         walletInput.focus();
                         return;
                     }
@@ -3213,7 +3383,7 @@
 
                     if (!isValidSolanaAddress(wallet)) {
                         status.className = "status error";
-                        status.innerText = "❌ Wrong address / Does not match selected blockchain: Solana.";
+                        status.innerText = "Wrong address / Does not match selected blockchain: Solana.";
                         walletInput.focus();
                         return;
                     }
@@ -3222,7 +3392,7 @@
 
                     if (!isValidEvmAddress(wallet)) {
                         status.className = "status error";
-                        status.innerText = `❌ Wrong address / Does not match selected blockchain: ${blockchain === "ethereum" ? "Ethereum" : "BNB Chain"}.`;
+                        status.innerText = `Wrong address / Does not match selected blockchain: ${blockchain === "ethereum" ? "Ethereum" : "BNB Chain"}.`;
                         walletInput.focus();
                         return;
                     }
@@ -3251,6 +3421,10 @@
 
                 try {
 
+                    // Read date filter (YYYY-MM-DD, UTC day)
+                    const dateFilterInput = document.getElementById("dateFilter");
+                    const dateFilterValue = dateFilterInput ? dateFilterInput.value.trim() : "";
+
                     const data =
                         await fetchJson(
                             API_BASE_URL +
@@ -3264,7 +3438,8 @@
                                 body: JSON.stringify({
                                     wallet,
                                     blockchain,
-                                    token
+                                    token,
+                                    ...(dateFilterValue ? { dateFilter: dateFilterValue } : {})
                                 })
                             }
                         );
@@ -3341,13 +3516,10 @@
                     status.className =
                         "status success";
 
+                    const txCount = data.transactionStats?.totalTransactions ?? data.transactions?.length ?? 0;
+                    const dateInfo = dateFilterValue ? ` (filtered: UTC ${dateFilterValue})` : "";
                     status.innerText =
-                        `Analysis completed — ${data.transactionStats
-                            ?.totalTransactions ??
-                        data.transactions
-                            ?.length ??
-                        0
-                        } transactions found.`;
+                        `Analysis completed — ${txCount} transactions found${dateInfo}.`;
 
                 } catch (error) {
 
@@ -5681,7 +5853,7 @@ ${data.generatedAt ||
                     return `
             <div class="live-tx-item">
                 <strong>
-                    ${tx.liveType === "NEW" ? "🟢 NEW" : "⚪ PAST 24H"}
+                    ${tx.liveType === "NEW" ? "NEW" : "PAST 24H"}
                     · ${escapeHtml(String(amount))} USDT
                 </strong>
                 <div class="live-tx-meta">
@@ -5923,7 +6095,14 @@ ${data.generatedAt ||
                 const container =
                     document.getElementById(
                         "realtimeAlerts"
+                    ) ||
+                    document.getElementById(
+                        "alertsContainer"
                     );
+
+                if (!container) {
+                    return;
+                }
 
                 if (
                     !data.alerts ||
