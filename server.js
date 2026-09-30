@@ -4923,6 +4923,22 @@ app.post(
                     "USDT"
                 ).toUpperCase();
 
+            // Optional UTC date filter: "YYYY-MM-DD"
+            const dateFilterRaw = req.body?.dateFilter
+                ? String(req.body.dateFilter).trim()
+                : "";
+
+            // Parse into UTC day start/end milliseconds
+            let dayStartMs = null;
+            let dayEndMs   = null;
+            if (dateFilterRaw && /^\d{4}-\d{2}-\d{2}$/.test(dateFilterRaw)) {
+                const d = new Date(dateFilterRaw + "T00:00:00.000Z");
+                if (!isNaN(d.getTime())) {
+                    dayStartMs = d.getTime();                 // UTC midnight
+                    dayEndMs   = dayStartMs + 86_400_000 - 1; // 23:59:59.999 UTC
+                }
+            }
+
             if (!wallet) {
 
                 return res
@@ -4973,7 +4989,9 @@ app.post(
 
                         blockchain,
 
-                        token
+                        token,
+
+                        dateFilter: dateFilterRaw || null
                     })
                 );
 
@@ -5000,12 +5018,32 @@ app.post(
                     blockchain,
                     {
                         forceRefresh: true,
-                        maxPages: INDEXER_MAX_PAGES
+                        maxPages: INDEXER_MAX_PAGES,
+                        ...(dayStartMs !== null ? { minTimestamp: dayStartMs } : {})
                     }
                 );
 
+            // ── Date-day filter ──────────────────────────────────────
+            // After fetching, keep only txns whose block_timestamp falls
+            // within the requested UTC day (when a date was provided).
+            const rawIndexed = indexed.transactions;
+            const filteredRaw = (dayStartMs !== null && dayEndMs !== null)
+                ? rawIndexed.filter(tx => {
+                    const ts = Number(
+                        tx.block_timestamp ||
+                        tx.timestamp ||
+                        tx.blockTime ||
+                        tx.timeStamp ||
+                        0
+                    );
+                    // TronGrid gives ms; Etherscan gives seconds — normalise
+                    const tsMs = ts > 1_000_000_000_000 ? ts : ts * 1000;
+                    return tsMs >= dayStartMs && tsMs <= dayEndMs;
+                  })
+                : rawIndexed;
+
             const normalized =
-                indexed.transactions
+                filteredRaw
                     .map(
                         tx =>
                             normalizeTransaction(
@@ -5173,6 +5211,8 @@ app.post(
 
                 total_indexed_transactions:
                     indexed.transactions.length,
+
+                date_filter: dateFilterRaw || null,
 
                 vasp,
 
