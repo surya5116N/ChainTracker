@@ -511,53 +511,6 @@
                 #f0b45c;
         }
 
-        .vasp-box {
-            display:
-                grid;
-
-            grid-template-columns:
-                repeat(4, 1fr);
-
-            gap:
-                12px;
-        }
-
-        .vasp-item {
-            background:
-                #071016;
-
-            border:
-                1px solid #18313d;
-
-            border-radius:
-                8px;
-
-            padding:
-                12px;
-        }
-
-        .vasp-item small {
-            display:
-                block;
-
-            color:
-                #8297a3;
-
-            font-size:
-                10px;
-
-            margin-bottom:
-                5px;
-        }
-
-        .vasp-item span {
-            font-size:
-                12px;
-
-            word-break:
-                break-word;
-        }
-
         .table-wrap {
             overflow-x:
                 auto;
@@ -921,11 +874,6 @@
             stroke: #65d38b;
         }
 
-        .graph-node-bg.vasp {
-            stroke: #f0b45c;
-            stroke-width: 2.3;
-        }
-
         .graph-node-dot {
             fill: #62b9ff;
         }
@@ -936,10 +884,6 @@
 
         .graph-node-dot.receiver {
             fill: #65d38b;
-        }
-
-        .graph-node-dot.vasp {
-            fill: #f0b45c;
         }
 
         .graph-node-title-pro {
@@ -1199,10 +1143,6 @@
             background: #ff7777;
         }
 
-        .graph-legend-pro i.vasp {
-            background: #f0b45c;
-        }
-
         @media (max-width: 1000px) {
             .graph-toolbar-pro {
                 grid-template-columns: repeat(3, minmax(110px, 1fr));
@@ -1301,11 +1241,6 @@
             stroke-width: 2.5;
         }
 
-        .graph-node-card.vasp {
-            stroke: #f0b45c;
-            stroke-width: 2;
-        }
-
         .graph-node-title {
             fill: #e7f1f5;
             font-size: 12px;
@@ -1358,10 +1293,6 @@
 
         .graph-key i.suspect {
             background: #ff7777;
-        }
-
-        .graph-key i.vasp {
-            background: #f0b45c;
         }
 
         .graph-empty {
@@ -1763,7 +1694,6 @@
         @media (max-width: 900px) {
 
             .cards,
-            .vasp-box,
             .grid-2,
             .feature-grid,
             .integration-grid,
@@ -1801,7 +1731,6 @@
             .card,
             .insight,
             .match-box,
-            .vasp-item,
             .feature-item,
             .integration-item,
             .node,
@@ -2248,7 +2177,6 @@
             <button class="ct-side-link active" data-target="wallet-investigation"><span
                     class="ct-side-icon">⌕</span>Investigation</button>
             <button class="ct-side-link" data-target="overview"><span class="ct-side-icon">▣</span>Overview</button>
-            <button class="ct-side-link" data-target="vasp-attribution"><span class="ct-side-icon">$</span>VASP</button>
             <button class="ct-side-link" data-target="complaint-cross-reference"><span
                     class="ct-side-icon">!</span>Complaints</button>
             <button class="ct-side-link" data-target="fund-flow-graph"><span class="ct-side-icon">⌁</span>Fund
@@ -2287,7 +2215,7 @@
 
             <div class="header-status">
                 <span class="badge" id="apiStatusBadge">CHECKING API...</span>
-                <span class="badge" id="dbStatusBadge">VASP DB</span>
+                <span class="badge" id="dbStatusBadge">COMPLAINT DB</span>
                 <span class="badge" id="watcherStatusBadge">WATCHERS: 0</span>
             </div>
 
@@ -2443,85 +2371,6 @@
             </div>
 
         </div>
-
-
-
-
-        <!-- =====================================================
-         VASP
-    ====================================================== -->
-
-        <div id="vasp-attribution" class="panel">
-
-            <div class="panel-title">
-
-                <h3>
-                    VASP Attribution
-                </h3>
-
-                <span class="badge">
-                    ATTRIBUTION
-                </span>
-
-            </div>
-
-            <div class="vasp-box">
-
-                <div class="vasp-item">
-
-                    <small>
-                        VASP
-                    </small>
-
-                    <span id="vaspName">
-                        —
-                    </span>
-
-                </div>
-
-                <div class="vasp-item">
-
-                    <small>
-                        TYPE
-                    </small>
-
-                    <span id="vaspType">
-                        —
-                    </span>
-
-                </div>
-
-                <div class="vasp-item">
-
-                    <small>
-                        CONFIDENCE
-                    </small>
-
-                    <span id="vaspConfidence">
-                        —
-                    </span>
-
-                </div>
-
-                <div class="vasp-item">
-
-                    <small>
-                        VERIFIED
-                    </small>
-
-                    <span id="vaspVerified">
-                        —
-                    </span>
-
-                </div>
-
-            </div>
-
-            <div id="vaspNote" class="status">
-            </div>
-
-        </div>
-
 
         <!-- =====================================================
          COMPLAINT
@@ -3162,7 +3011,7 @@
                     if (dbBadge) {
 
                         dbBadge.innerText =
-                            `DATA: ${data.complaintDatabase}/${data.vaspDatabase}`;
+                            `COMPLAINT DB: ${data.complaintDatabase || "—"}`;
 
                         dbBadge.className =
                             "badge";
@@ -3464,10 +3313,6 @@
 
                     updateOverview(
                         data
-                    );
-
-                    updateVasp(
-                        data.vasp
                     );
 
                     updateComplaint(
@@ -3813,49 +3658,6 @@
 
             }
 
-
-            /* =========================================================
-               VASP
-            ========================================================= */
-
-            function updateVasp(
-                vasp
-            ) {
-
-                setText(
-                    "vaspName",
-                    vasp?.name ||
-                    "No VASP Identified"
-                );
-
-                setText(
-                    "vaspType",
-                    vasp?.type ||
-                    "Unknown"
-                );
-
-                setText(
-                    "vaspConfidence",
-                    vasp?.confidence ||
-                    "Unknown"
-                );
-
-                setText(
-                    "vaspVerified",
-                    vasp?.verified
-                        ? "VERIFIED"
-                        : "NOT VERIFIED"
-                );
-
-                setText(
-                    "vaspNote",
-                    vasp?.note ||
-                    "No verified VASP attribution available."
-                );
-
-            }
-
-
             /* =========================================================
                COMPLAINT
             ========================================================= */
@@ -4177,17 +3979,6 @@
                             highValueDetected
                                 ? "High-value transfer detected (≥ 10,000 USDT)."
                                 : "No high-value transfer detected."
-                        )
-                    ],
-                    [
-                        "VASP Attribution",
-                        valueOr(
-                            insights.vasp,
-                            data.vasp?.name
-                                ? `VASP attributed: ${data.vasp.name}.`
-                                : Array.isArray(data.vaspMatches) && data.vaspMatches.length
-                                    ? `${data.vaspMatches.length} VASP attribution match(es) found.`
-                                    : "No verified VASP attribution returned."
                         )
                     ],
                     [
@@ -4617,20 +4408,6 @@
                                 .join(", ")
                             : "—";
 
-                const vaspName =
-                    summary.vasp ||
-                    data.vasp?.name ||
-                    (
-                        Array.isArray(data.vaspMatches) &&
-                            data.vaspMatches.length
-                            ? (
-                                data.vaspMatches[0]?.vasp ||
-                                data.vaspMatches[0]?.name ||
-                                "VASP Attributed"
-                            )
-                            : "No VASP Identified"
-                    );
-
                 const complaintMatch =
                     summary.complaintMatch ??
                     Boolean(
@@ -4708,9 +4485,6 @@ ${summary.alerts ??
 
 Fraud Typologies:
 ${typologies}
-
-VASP:
-${vaspName}
 
 Cybercrime Complaint Match:
 ${complaintMatch
@@ -5144,16 +4918,13 @@ ${data.generatedAt ||
 
                 const detail = getGraphAddressDetails(address, flows);
                 const role = meta?.role || "related wallet";
-                const vasp = meta?.vasp;
                 const roleLabel = role === "suspect"
                     ? "INVESTIGATED WALLET"
                     : role === "sender"
                         ? "SOURCE / SENDER"
                         : role === "receiver"
                             ? "DESTINATION / RECEIVER"
-                            : vasp
-                                ? `VASP · ${vasp.category || vasp.type || "Attributed"}`
-                                : "RELATED WALLET";
+                            : "RELATED WALLET";
 
                 const txRows = detail.related
                     .slice()
@@ -5181,7 +4952,7 @@ ${data.generatedAt ||
                 overlay.innerHTML = `
         <div class="graph-detail-head">
             <div>
-                <div class="graph-detail-title">${escapeHtml(vasp?.name || roleLabel)}</div>
+                <div class="graph-detail-title">${escapeHtml(roleLabel)}</div>
                 <div class="graph-detail-role">${escapeHtml(roleLabel)}</div>
             </div>
             <button type="button" class="graph-detail-close" data-graph-close>✕</button>
@@ -5194,19 +4965,7 @@ ${data.generatedAt ||
             <div class="graph-detail-card"><small>Total Flow</small><strong>${formatNumber(detail.totalFlow)} USDT</strong></div>
             <div class="graph-detail-card"><small>Total Sent</small><strong>${formatNumber(detail.sent)} USDT</strong></div>
             <div class="graph-detail-card"><small>Total Received</small><strong>${formatNumber(detail.received)} USDT</strong></div>
-            <div class="graph-detail-card"><small>VASP</small><strong>${escapeHtml(vasp?.name || "Not attributed")}</strong></div>
-            <div class="graph-detail-card"><small>Verified</small><strong>${escapeHtml(String(vasp?.verified ?? "—"))}</strong></div>
         </div>
-
-        ${vasp ? `
-            <div class="graph-detail-section-title">Attribution</div>
-            <div class="graph-detail-address">
-                <strong>${escapeHtml(vasp.name || vasp.vasp || "Attributed VASP")}</strong><br>
-                Type: ${escapeHtml(vasp.category || vasp.type || "—")}<br>
-                Confidence: ${escapeHtml(vasp.confidence || "—")}<br>
-                Source: ${escapeHtml(vasp.source || "—")}
-            </div>
-        ` : ""}
 
         <div class="graph-detail-section-title">Top Counterparties</div>
         ${counterpartyRows ? `
@@ -5321,19 +5080,6 @@ ${data.generatedAt ||
                 const MAX_VISIBLE_RELATIONSHIPS = LARGE_DATA ? 140 : 180;
                 const MAX_SIDE_NODES = LARGE_DATA ? 28 : 36;
                 const MAX_OTHER_NODES = LARGE_DATA ? 16 : 24;
-
-                const vaspEntries = Array.isArray(latestAnalysis?.vaspMatches)
-                    ? latestAnalysis.vaspMatches
-                    : Array.isArray(latestAnalysis?.vasp_attribution)
-                        ? latestAnalysis.vasp_attribution
-                        : [];
-
-                const vaspMap = new Map();
-                for (const entry of vaspEntries) {
-                    const address = entry?.address ?? entry?.wallet_address ?? entry?.wallet ?? "";
-                    if (address) vaspMap.set(String(address).toLowerCase(), entry);
-                }
-
                 // Prioritise relationships touching the investigated wallet, then highest count/amount.
                 allPairs.sort((a, b) => {
                     const aDirect = (a.from.toLowerCase() === walletKey || a.to.toLowerCase() === walletKey) ? 1 : 0;
@@ -5433,7 +5179,6 @@ ${data.generatedAt ||
                 const roleOf = address => {
                     const key = address.toLowerCase();
                     if (key === walletKey) return "suspect";
-                    if (vaspMap.has(key)) return "vasp";
                     if (senderCandidates.some(a => a.toLowerCase() === key)) return "sender";
                     if (receiverCandidates.some(a => a.toLowerCase() === key)) return "receiver";
                     return "other";
@@ -5475,13 +5220,12 @@ ${data.generatedAt ||
                     if (!pos) return "";
                     const stat = nodeStats.get(address.toLowerCase()) || { sent: 0, received: 0, txCount: 0 };
                     const role = roleOf(address);
-                    const vasp = vaspMap.get(address.toLowerCase());
                     const totalFlow = stat.sent + stat.received;
                     const size = role === "suspect" ? { w: 300, h: 150 } : { w: 220, h: 112 };
                     const left = pos.x - size.w / 2;
                     const top = pos.y - size.h / 2;
-                    const title = role === "suspect" ? "INVESTIGATED WALLET" : vasp?.name || vasp?.vasp || (role === "sender" ? "SOURCE / SENDER" : role === "receiver" ? "DESTINATION / RECEIVER" : "COUNTERPARTY");
-                    const roleText = role === "suspect" ? "Investigation Target" : vasp ? `VASP · ${vasp.category || vasp.type || "Attributed"}` : role === "sender" ? "Incoming source" : role === "receiver" ? "Outgoing destination" : "Related wallet";
+                    const title = role === "suspect" ? "INVESTIGATED WALLET" : (role === "sender" ? "SOURCE / SENDER" : role === "receiver" ? "DESTINATION / RECEIVER" : "COUNTERPARTY");
+                    const roleText = role === "suspect" ? "Investigation Target" : role === "sender" ? "Incoming source" : role === "receiver" ? "Outgoing destination" : "Related wallet";
                     const cls = role === "suspect" ? "suspect" : role;
                     return `
             <g class="graph-node-pro" data-node-key="${escapeHtml(address.toLowerCase())}" tabindex="0" role="button" aria-label="Open full details for ${escapeHtml(address)}">
@@ -5564,7 +5308,6 @@ ${data.generatedAt ||
                 <span><i></i> Sender / source</span>
                 <span><i class="receiver"></i> Receiver / destination</span>
                 <span><i class="suspect"></i> Investigated wallet</span>
-                <span><i class="vasp"></i> VASP attribution</span>
                 <span>Line thickness = amount + transaction density</span>
             </div>
         </div>
@@ -5668,12 +5411,10 @@ ${data.generatedAt ||
                     const key = nodeEl.getAttribute("data-node-key");
                     const fullAddress = displayedAddresses.find(a => a.toLowerCase() === key) || key;
                     const role = roleOf(fullAddress);
-                    const vasp = vaspMap.get(key);
-
                     const showDetails = () => {
                         container.querySelectorAll(".graph-node-pro.selected").forEach(n => n.classList.remove("selected"));
                         nodeEl.classList.add("selected");
-                        renderGraphAddressDetail(fullAddress, flows, { role, vasp }, detailOverlay);
+                        renderGraphAddressDetail(fullAddress, flows, { role }, detailOverlay);
                     };
 
                     nodeEl.addEventListener("mouseenter", () => {
@@ -6283,9 +6024,6 @@ ${data.generatedAt ||
 
                                         complaintCrossReference:
                                             latestAnalysis.complaintCrossReference,
-
-                                        vasp:
-                                            latestAnalysis.vasp
                                     })
                             }
                         );
